@@ -5,4 +5,7 @@ idf_component_register(SRCS
                         "ring_buffer.c"
                         "i2s_player.c"
                         "udp_audio_server.c"
+                        "time_sync.c"
+                        "volume_storage.c"
+                        "http_status_server.c"
                     INCLUDE_DIRS ".")

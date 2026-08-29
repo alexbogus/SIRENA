@@ -3,10 +3,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 static const char *TAG = "udp_audio_server";
+static volatile int64_t s_last_message_time_ms = 0;
 
 #define RX_TASK_STACK (4096)
 #define RX_TASK_PRIO  (10)
@@ -51,7 +53,13 @@ static void udp_rx_task(void *arg)
             continue;
         }
         ring_buffer_write(ctx->rb, rx_buffer, (size_t) len);
+        s_last_message_time_ms = esp_timer_get_time() / 1000;
     }
+}
+
+int64_t udp_audio_server_get_last_message_time_ms(void)
+{
+    return s_last_message_time_ms;
 }
 
 esp_err_t udp_audio_server_start(ring_buffer_t *rb)
