@@ -39,6 +39,12 @@ def create_app() -> Flask:
     app.register_blueprint(rules_bp)
     app.register_blueprint(settings_bp)
 
+    @app.get("/healthz")
+    def healthz():
+        with db.db_cursor() as cur:
+            cur.execute("SELECT 1")
+        return {"status": "ok"}, 200
+
     _start_scheduler()
     return app
 
