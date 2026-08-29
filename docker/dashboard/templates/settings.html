@@ -72,6 +72,10 @@
                 </span>
             </div>
             <div class="flex items-center gap-3 shrink-0">
+                <button type="button" class="tone-play text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
+                        data-src="{{ url_for('static', filename='audio/tones/' + t.filename) }}">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i> Escuchar
+                </button>
                 {% if not t.is_default %}
                 <form method="post" action="{{ url_for('settings.tones_default', tone_id=t.id) }}">
                     <button class="text-sky-400 hover:text-sky-300 text-xs flex items-center gap-1">
@@ -114,5 +118,41 @@
             Subir
         </button>
     </form>
+    <audio id="tone-player" class="hidden"></audio>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const player = document.getElementById("tone-player");
+    let activeBtn = null;
+
+    function resetBtn(btn) {
+        btn.querySelector("i").setAttribute("data-lucide", "play");
+        lucide.createIcons();
+    }
+
+    document.querySelectorAll(".tone-play").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const wasActive = activeBtn === btn && !player.paused;
+            if (activeBtn) resetBtn(activeBtn);
+            player.pause();
+            activeBtn = null;
+            if (wasActive) return;
+
+            player.src = btn.dataset.src;
+            player.play();
+            activeBtn = btn;
+            btn.querySelector("i").setAttribute("data-lucide", "pause");
+            lucide.createIcons();
+        });
+    });
+
+    player.addEventListener("ended", () => {
+        if (activeBtn) resetBtn(activeBtn);
+        activeBtn = null;
+    });
+})();
+</script>
 {% endblock %}
