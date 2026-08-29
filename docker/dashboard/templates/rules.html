@@ -1,12 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Reglas de alerta 112CV{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Reglas de alerta automática (112CV)</h1>
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-xl font-semibold">Reglas de alerta automática (112CV)</h1>
+    <form method="post" action="{{ url_for('rules.rescan') }}">
+        <button class="flex items-center gap-1.5 text-sm bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-3 py-1.5">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Re-escanear feed 112CV
+        </button>
+    </form>
+</div>
 
 <p class="text-sm text-slate-400 mb-4">
-    Las categorías se descubren dinámicamente a partir de los incidentes vistos por el poller; si una
-    categoría no aparece todavía en el desplegable es porque el feed no ha traído ningún incidente de ese
-    tipo desde que arrancó el servicio. El killswitch de alertas automáticas está en el dashboard principal.
+    Los municipios y categorías se descubren dinámicamente a partir de los incidentes vistos por el poller;
+    si uno no aparece todavía en el desplegable es porque el feed no ha traído ningún incidente de ese tipo
+    o de esa población desde que arrancó el servicio. Usa "Re-escanear feed 112CV" para forzar una consulta
+    inmediata sin esperar al siguiente ciclo automático. El killswitch de alertas automáticas está en el
+    dashboard principal.
 </p>
 
 <div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mb-6">

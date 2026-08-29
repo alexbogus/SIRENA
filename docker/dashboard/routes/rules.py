@@ -7,6 +7,8 @@ import models.taxonomy as taxonomy_model
 import models.tones as tones_model
 import models.zones as zones_model
 from routes.auth import login_required
+from scheduler import scheduler
+from services.cv112_poller import poll_once as cv112_poll_once
 
 bp = Blueprint("rules", __name__, url_prefix="/rules")
 logger = config.get_logger("rules")
@@ -62,6 +64,34 @@ def _save(rule_id: int | None) -> None:
         rules_model.update(rule_id, name, municipios, categorias, target_zone_id, tone_id, enabled)
         logger.info(f"Regla de alerta {rule_id} actualizada: {name!r}")
         flash("Regla actualizada.", "success")
+
+
+@bp.route("/rescan", methods=["POST"])
+@login_required
+def rescan():
+    before_municipios = set(taxonomy_model.all_municipios())
+    before_categorias = {tuple(c) for c in taxonomy_model.all_category_paths()}
+
+    try:
+        cv112_poll_once(scheduler)
+    except Exception:
+        logger.exception("Fallo al forzar el re-escaneo del feed 112CV")
+        flash("No se pudo contactar con el feed del 112CV. Revisa los logs.", "error")
+        return redirect(url_for("rules.index"))
+
+    new_municipios = set(taxonomy_model.all_municipios()) - before_municipios
+    new_categorias = {tuple(c) for c in taxonomy_model.all_category_paths()} - before_categorias
+
+    if new_municipios or new_categorias:
+        parts = []
+        if new_municipios:
+            parts.append(f"{len(new_municipios)} municipio(s) nuevo(s): {', '.join(sorted(new_municipios))}")
+        if new_categorias:
+            parts.append(f"{len(new_categorias)} categoría(s) nueva(s)")
+        flash("Re-escaneo completado. " + "; ".join(parts) + ".", "success")
+    else:
+        flash("Re-escaneo completado. No hay municipios ni categorías nuevas en el feed actual.", "success")
+    return redirect(url_for("rules.index"))
 
 
 @bp.route("/<int:rule_id>/delete", methods=["POST"])

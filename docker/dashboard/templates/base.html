@@ -203,8 +203,11 @@
             const btn = root.querySelector("[data-dropdown-toggle-btn]");
             const panel = root.querySelector("[data-dropdown-panel]");
             const label = root.querySelector("[data-dropdown-label]");
+            const search = root.querySelector("[data-dropdown-search]");
+            const empty = root.querySelector("[data-dropdown-empty]");
             const placeholder = label.dataset.placeholder || label.textContent;
             const checkboxes = () => Array.from(panel.querySelectorAll("input[type=checkbox]"));
+            const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
             function updateLabel() {
                 const checked = checkboxes().filter(c => c.checked);
@@ -217,14 +220,37 @@
                 }
             }
 
+            function filterOptions(query) {
+                const q = normalize(query.trim());
+                let visibleCount = 0;
+                checkboxes().forEach(c => {
+                    const wrapper = c.closest("label");
+                    if (!wrapper) return;
+                    const text = normalize(c.dataset.label || c.value || "");
+                    const matches = q.length === 0 || text.includes(q);
+                    wrapper.classList.toggle("hidden", !matches);
+                    if (matches) visibleCount += 1;
+                });
+                if (empty) empty.classList.toggle("hidden", visibleCount !== 0);
+            }
+
             btn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 const isOpen = !panel.classList.contains("hidden");
                 document.querySelectorAll("[data-dropdown-panel]").forEach(p => p.classList.add("hidden"));
                 panel.classList.toggle("hidden", isOpen);
+                if (!isOpen && search) {
+                    search.value = "";
+                    filterOptions("");
+                    requestAnimationFrame(() => search.focus());
+                }
             });
             panel.addEventListener("click", (e) => e.stopPropagation());
             checkboxes().forEach(c => c.addEventListener("change", updateLabel));
+            if (search) {
+                search.addEventListener("click", (e) => e.stopPropagation());
+                search.addEventListener("input", () => filterOptions(search.value));
+            }
             updateLabel();
         }
 
