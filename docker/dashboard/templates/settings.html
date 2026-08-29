@@ -49,4 +49,70 @@
         Guardar
     </button>
 </form>
+
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+    <div>
+        <h2 class="font-medium mb-1">Tonos</h2>
+        <p class="text-xs text-slate-500">
+            Preámbulo sonoro que se antepone a la voz en cada aviso. El tono por defecto se usa en
+            envíos manuales y en las reglas 112CV que no tengan un tono propio asignado (ver /rules).
+        </p>
+    </div>
+
+    <div class="space-y-2">
+        {% for t in tones %}
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-slate-800/60 border border-slate-800 rounded-lg px-3 py-2">
+            <div class="flex items-center gap-2 min-w-[140px]">
+                <span class="text-sm">{{ t.name }}</span>
+                {% if t.is_default %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300">por defecto</span>
+                {% endif %}
+                <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-emerald-900/60 text-emerald-300' if t.enabled else 'bg-slate-800 text-slate-500' }}">
+                    {{ 'habilitado' if t.enabled else 'deshabilitado' }}
+                </span>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                {% if not t.is_default %}
+                <form method="post" action="{{ url_for('settings.tones_default', tone_id=t.id) }}">
+                    <button class="text-sky-400 hover:text-sky-300 text-xs flex items-center gap-1">
+                        <i data-lucide="star" class="w-3.5 h-3.5"></i> Por defecto
+                    </button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('settings.tones_toggle', tone_id=t.id) }}"
+                      data-confirm="¿{{ 'Deshabilitar' if t.enabled else 'Habilitar' }} el tono {{ t.name }}?">
+                    <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                        <i data-lucide="{{ 'pause-circle' if t.enabled else 'play-circle' }}" class="w-3.5 h-3.5"></i>
+                        {{ 'Deshabilitar' if t.enabled else 'Habilitar' }}
+                    </button>
+                </form>
+                <form method="post" action="{{ url_for('settings.tones_delete', tone_id=t.id) }}"
+                      data-confirm="¿Eliminar el tono {{ t.name }}?" data-confirm-variant="danger">
+                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">No hay tonos creados todavía.</p>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('settings.tones_upload') }}" enctype="multipart/form-data"
+          class="flex gap-2 items-end pt-2 border-t border-slate-800 flex-wrap">
+        <div class="flex-1 min-w-[140px]">
+            <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+            <input name="name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="flex-1 min-w-[160px]">
+            <label class="block text-xs text-slate-400 mb-1">Archivo .wav</label>
+            <input type="file" name="file" accept="audio/wav,.wav" required
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+        </div>
+        <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">
+            Subir
+        </button>
+    </form>
+</div>
 {% endblock %}

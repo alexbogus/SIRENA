@@ -91,6 +91,17 @@ def resolve_targets(zone_ids: list[int] | None, all_speakers: bool) -> list[dict
     return [dict(r) for r in rows]
 
 
+def set_volume(speaker_id: int, volume_percent: int) -> None:
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO speaker_status(speaker_id, volume_percent) VALUES (?, ?)
+            ON CONFLICT(speaker_id) DO UPDATE SET volume_percent = excluded.volume_percent
+            """,
+            (speaker_id, volume_percent),
+        )
+
+
 def upsert_status(speaker_id: int, status: dict, poll_ok: bool, poll_at: str) -> None:
     with db_cursor() as cur:
         if poll_ok:

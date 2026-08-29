@@ -18,18 +18,23 @@
 
 <template id="speaker-card-template">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
-        <div class="flex items-center justify-between">
-            <span class="font-semibold flex items-center gap-2">
-                <span class="dot w-2.5 h-2.5 rounded-full"></span>
-                <span class="name"></span>
+        <div class="flex items-center justify-between gap-2">
+            <span class="font-semibold flex items-center gap-2 min-w-0">
+                <span class="dot w-2.5 h-2.5 rounded-full shrink-0"></span>
+                <span class="name truncate"></span>
             </span>
-            <span class="state text-xs px-2 py-0.5 rounded-full bg-slate-800"></span>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="state text-xs px-2 py-0.5 rounded-full bg-slate-800"></span>
+                <img class="model-img w-10 h-10 object-contain" src="{{ url_for('static', filename='images/speaker-model.png') }}" alt="Waveshare ESP32-S3-AUDIO-Board">
+            </div>
         </div>
         <div class="text-xs text-slate-400 ip"></div>
         <div class="text-xs text-slate-400 fw"></div>
-        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
-            <div>RSSI: <span class="rssi text-slate-200"></span></div>
-            <div>Vol: <span class="volume text-slate-200"></span></div>
+        <div class="text-xs text-slate-400">RSSI: <span class="rssi text-slate-200"></span></div>
+        <div class="text-xs text-slate-400 flex items-center gap-2">
+            <span class="shrink-0">Vol:</span>
+            <input type="range" class="volume-slider flex-1" min="0" max="100" step="1">
+            <span class="volume-value text-slate-200 w-10 text-right shrink-0"></span>
         </div>
         <div class="text-xs text-slate-400">Último msg altavoz: <span class="last-message-at text-slate-200"></span></div>
         <div class="text-xs text-slate-400">Último healthcheck: <span class="last-healthcheck-at text-slate-200"></span></div>
@@ -113,6 +118,11 @@ function renderHistoryTable(tbody, history) {
     }
 }
 
+// Altavoces cuyo slider de volumen se está arrastrando ahora mismo: el
+// refresh periódico (7s) no debe pisar el valor mientras el usuario interactúa.
+const draggingSpeakers = new Set();
+const volumeDebounceTimers = {}; // { [speakerId]: timeoutId }
+
 function renderSpeakers(speakers) {
     const grid = document.getElementById("speaker-grid");
     const tpl = document.getElementById("speaker-card-template");
@@ -123,7 +133,15 @@ function renderSpeakers(speakers) {
         node.querySelector(".ip").textContent = `IP ${sp.ip}`;
         node.querySelector(".fw").textContent = sp.firmware_version ? `fw ${sp.firmware_version}` : "fw —";
         node.querySelector(".rssi").textContent = sp.rssi_dbm !== null && sp.rssi_dbm !== undefined ? `${sp.rssi_dbm}dBm` : "—";
-        node.querySelector(".volume").textContent = sp.volume_percent !== null && sp.volume_percent !== undefined ? `${sp.volume_percent}%` : "—";
+
+        const hasVolume = sp.volume_percent !== null && sp.volume_percent !== undefined;
+        const slider = node.querySelector(".volume-slider");
+        slider.dataset.speakerId = sp.id;
+        if (!draggingSpeakers.has(String(sp.id))) {
+            slider.value = hasVolume ? sp.volume_percent : 0;
+        }
+        node.querySelector(".volume-value").textContent = hasVolume ? `${sp.volume_percent}%` : "—";
+
         node.querySelector(".last-message-at").textContent = sp.last_message_at || "—";
         node.querySelector(".last-healthcheck-at").textContent = sp.last_healthcheck_at || "—";
         node.querySelector(".uptime").textContent = fmtUptime(sp.uptime_seconds);
@@ -173,6 +191,43 @@ document.getElementById("speaker-grid").addEventListener("click", (e) => {
     const dir = current.col === col && current.dir === "asc" ? "desc" : "asc";
     historySortState[speakerId] = {col, dir};
     refresh();
+});
+
+async function applyVolume(speakerId, value) {
+    try {
+        await fetch(`/speakers/${speakerId}/volume`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({volume_percent: value}),
+        });
+    } catch (e) {
+        console.error("Fallo al aplicar el volumen", e);
+    }
+}
+
+const speakerGrid = document.getElementById("speaker-grid");
+
+speakerGrid.addEventListener("input", (e) => {
+    const slider = e.target.closest(".volume-slider");
+    if (!slider) return;
+    const speakerId = slider.dataset.speakerId;
+    const value = Number(slider.value);
+    slider.closest(".space-y-2").querySelector(".volume-value").textContent = `${value}%`;
+
+    clearTimeout(volumeDebounceTimers[speakerId]);
+    volumeDebounceTimers[speakerId] = setTimeout(() => applyVolume(speakerId, value), 500);
+});
+
+speakerGrid.addEventListener("pointerdown", (e) => {
+    const slider = e.target.closest(".volume-slider");
+    if (slider) draggingSpeakers.add(slider.dataset.speakerId);
+});
+
+["pointerup", "pointercancel"].forEach(evt => {
+    speakerGrid.addEventListener(evt, (e) => {
+        const slider = e.target.closest(".volume-slider");
+        if (slider) draggingSpeakers.delete(slider.dataset.speakerId);
+    });
 });
 
 function renderHealth(health) {

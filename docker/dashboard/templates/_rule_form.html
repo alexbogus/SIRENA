@@ -28,6 +28,15 @@
             {% endfor %}
         </select>
     </div>
+    <div>
+        <label class="block text-xs text-slate-400 mb-1">Tono</label>
+        <select name="tone_id" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="">Tono por defecto</option>
+            {% for t in tones %}
+            <option value="{{ t.id }}" {{ 'selected' if editing and r.tone_id == t.id else '' }}>{{ t.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" name="enabled" {{ 'checked' if not editing or r.enabled else '' }}> Regla activa
     </label>

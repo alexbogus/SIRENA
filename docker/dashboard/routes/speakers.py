@@ -1,4 +1,5 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+import requests
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 import config
 import models.audit as audit_model
@@ -53,6 +54,30 @@ def edit(speaker_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar el altavoz: {exc}", "error")
     return redirect(url_for("speakers.index"))
+
+
+@bp.route("/<int:speaker_id>/volume", methods=["POST"])
+@login_required
+def set_volume(speaker_id: int):
+    sp = speakers_model.get(speaker_id)
+    if not sp:
+        return jsonify({"ok": False, "error": "Altavoz no encontrado"}), 404
+
+    try:
+        volume_percent = int((request.get_json(silent=True) or {}).get("volume_percent"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "volume_percent inválido"}), 400
+    volume_percent = max(0, min(100, volume_percent))
+
+    try:
+        resp = requests.post(f"http://{sp['ip']}/volume", json={"volume_percent": volume_percent}, timeout=3)
+        resp.raise_for_status()
+    except Exception as exc:
+        logger.warning(f"No se pudo fijar el volumen de {sp['name']!r} ({sp['ip']}): {exc}")
+        return jsonify({"ok": False, "error": "El altavoz no responde"}), 502
+
+    speakers_model.set_volume(speaker_id, volume_percent)
+    return jsonify({"ok": True, "volume_percent": volume_percent})
 
 
 @bp.route("/<int:speaker_id>/delete", methods=["POST"])

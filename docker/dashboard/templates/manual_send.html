@@ -6,10 +6,20 @@
 <form method="post" action="{{ url_for('manual_send.send') }}" class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 max-w-2xl">
     <div>
         <label class="block text-sm text-slate-400 mb-1">Texto a leer</label>
-        <textarea name="text" rows="4" required
+        <textarea name="text" id="text-input" rows="4" required
                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"
                   placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
     </div>
+
+    <div class="flex items-center gap-3 flex-wrap">
+        <button type="button" id="preview-btn"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+            <i data-lucide="play-circle" class="w-4 h-4"></i>
+            <span id="preview-btn-label">Escuchar preview</span>
+        </button>
+        <span id="preview-error" class="text-xs text-red-400 hidden"></span>
+    </div>
+    <audio id="preview-player" controls class="w-full hidden"></audio>
 
     <div>
         <label class="block text-sm text-slate-400 mb-2">Destino</label>
@@ -45,5 +55,44 @@ function updatePicker() {
 }
 allRadio.addEventListener("change", updatePicker);
 zonesRadio.addEventListener("change", updatePicker);
+
+const previewBtn = document.getElementById("preview-btn");
+const previewBtnLabel = document.getElementById("preview-btn-label");
+const previewPlayer = document.getElementById("preview-player");
+const previewError = document.getElementById("preview-error");
+const textInput = document.getElementById("text-input");
+
+previewBtn.addEventListener("click", async () => {
+    const text = textInput.value.trim();
+    previewError.classList.add("hidden");
+    if (!text) {
+        previewError.textContent = "Escribe un texto antes de escuchar el preview.";
+        previewError.classList.remove("hidden");
+        return;
+    }
+
+    previewBtn.disabled = true;
+    previewBtnLabel.textContent = "Generando...";
+    try {
+        const resp = await fetch("{{ url_for('manual_send.preview') }}", {
+            method: "POST",
+            body: new URLSearchParams({ text }),
+        });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || "Fallo al generar el audio.");
+        }
+        const blob = await resp.blob();
+        previewPlayer.src = URL.createObjectURL(blob);
+        previewPlayer.classList.remove("hidden");
+        previewPlayer.play();
+    } catch (e) {
+        previewError.textContent = e.message;
+        previewError.classList.remove("hidden");
+    } finally {
+        previewBtn.disabled = false;
+        previewBtnLabel.textContent = "Escuchar preview";
+    }
+});
 </script>
 {% endblock %}

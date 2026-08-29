@@ -46,8 +46,23 @@ CREATE TABLE IF NOT EXISTS alert_rules (
     municipios      TEXT,   -- JSON array de strings, NULL/[] = todos
     categorias      TEXT,   -- JSON array de rutas de taxonomia (["Incendio"], ["Incendio","Vegetación"]...), NULL/[] = todas
     target_zone_id  INTEGER REFERENCES zones(id),  -- NULL = target especial "todos"
+    tone_id         INTEGER REFERENCES tones(id),  -- NULL = usa el tono por defecto global
     enabled         INTEGER NOT NULL DEFAULT 1,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Catálogo de tonos de preámbulo disponibles para los avisos (manuales y
+-- automáticos). Solo una fila puede tener is_default = 1 a la vez (se
+-- garantiza en models/tones.py, no con una constraint SQL). Sembrado por
+-- primera vez en db.py::init_db() con los WAV generados por
+-- scripts/generate_tones.py.
+CREATE TABLE IF NOT EXISTS tones (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    filename   TEXT NOT NULL UNIQUE,   -- relativo a static/audio/tones/
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS messages (

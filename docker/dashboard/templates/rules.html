@@ -25,7 +25,8 @@
         </div>
         <div class="text-xs text-slate-400 mb-1">Municipios: {{ r.municipios|join(', ') if r.municipios else 'todos' }}</div>
         <div class="text-xs text-slate-400 mb-1">Categorías: {{ r.categorias|map('join', '>')|join(', ') if r.categorias else 'todas' }}</div>
-        <div class="text-xs text-slate-400 mb-3">Destino: {{ zones|selectattr('id', 'equalto', r.target_zone_id)|map(attribute='name')|first or 'Todos' }}</div>
+        <div class="text-xs text-slate-400 mb-1">Destino: {{ zones|selectattr('id', 'equalto', r.target_zone_id)|map(attribute='name')|first or 'Todos' }}</div>
+        <div class="text-xs text-slate-400 mb-3">Tono: {{ tones|selectattr('id', 'equalto', r.tone_id)|map(attribute='name')|first or 'por defecto' }}</div>
         <details>
             <summary class="text-sm text-emerald-400 cursor-pointer">Editar</summary>
             <div class="mt-3">

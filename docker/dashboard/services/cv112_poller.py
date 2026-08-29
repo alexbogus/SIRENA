@@ -149,7 +149,7 @@ def _announce(incident_id: int, props: dict, geometry: dict | None, rule: dict,
         return
 
     try:
-        wav_path = build_alert_wav(text)
+        wav_path = build_alert_wav(text, tone_id=rule.get("tone_id"))
     except Exception:
         logger.error(f"Fallo de síntesis TTS para el incidente {incident_id}, se reintentará en el siguiente poll",
                      extra={"correlation_id": correlation_id}, exc_info=True)

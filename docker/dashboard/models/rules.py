@@ -31,23 +31,24 @@ def get(rule_id: int) -> dict | None:
 
 
 def create(name: str, municipios: list[str], categorias: list[list[str]],
-           target_zone_id: int | None, enabled: bool) -> int:
+           target_zone_id: int | None, tone_id: int | None, enabled: bool) -> int:
     with db_cursor() as cur:
         cur.execute(
-            "INSERT INTO alert_rules(name, municipios, categorias, target_zone_id, enabled) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (name, json.dumps(municipios), json.dumps(categorias), target_zone_id, 1 if enabled else 0),
+            "INSERT INTO alert_rules(name, municipios, categorias, target_zone_id, tone_id, enabled) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (name, json.dumps(municipios), json.dumps(categorias), target_zone_id, tone_id,
+             1 if enabled else 0),
         )
         return cur.lastrowid
 
 
 def update(rule_id: int, name: str, municipios: list[str], categorias: list[list[str]],
-           target_zone_id: int | None, enabled: bool) -> None:
+           target_zone_id: int | None, tone_id: int | None, enabled: bool) -> None:
     with db_cursor() as cur:
         cur.execute(
             "UPDATE alert_rules SET name = ?, municipios = ?, categorias = ?, "
-            "target_zone_id = ?, enabled = ? WHERE id = ?",
-            (name, json.dumps(municipios), json.dumps(categorias), target_zone_id,
+            "target_zone_id = ?, tone_id = ?, enabled = ? WHERE id = ?",
+            (name, json.dumps(municipios), json.dumps(categorias), target_zone_id, tone_id,
              1 if enabled else 0, rule_id),
         )
 

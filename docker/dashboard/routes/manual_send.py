@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, after_this_request, flash, redirect, render_template, request, send_file, url_for
 
 import config
 import models.messages as messages_model
@@ -22,6 +22,27 @@ logger = config.get_logger("manual_send")
 @login_required
 def index():
     return render_template("manual_send.html", zones=zones_model.list_all())
+
+
+@bp.route("/preview", methods=["POST"])
+@login_required
+def preview():
+    text = request.form.get("text", "").strip()
+    if not text:
+        return {"error": "El texto no puede estar vacío."}, 400
+
+    try:
+        wav_path = build_alert_wav(text)
+    except Exception:
+        logger.exception("Fallo de síntesis TTS en preview")
+        return {"error": "Fallo al generar el audio (Piper no responde)."}, 502
+
+    @after_this_request
+    def _cleanup(response):
+        Path(wav_path).unlink(missing_ok=True)
+        return response
+
+    return send_file(wav_path, mimetype="audio/wav")
 
 
 @bp.route("/", methods=["POST"])

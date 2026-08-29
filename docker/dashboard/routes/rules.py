@@ -4,6 +4,7 @@ import config
 import models.incidents as incidents_model
 import models.rules as rules_model
 import models.taxonomy as taxonomy_model
+import models.tones as tones_model
 import models.zones as zones_model
 from routes.auth import login_required
 
@@ -18,6 +19,7 @@ def index():
         "rules.html",
         rules=rules_model.list_all(),
         zones=zones_model.list_all(),
+        tones=tones_model.list_enabled(),
         municipios=taxonomy_model.all_municipios(),
         category_paths=taxonomy_model.all_category_paths(),
     )
@@ -44,6 +46,8 @@ def _save(rule_id: int | None) -> None:
     categorias = [c.split(">") for c in categorias_raw if c.strip()]
     target_zone_raw = request.form.get("target_zone_id", "")
     target_zone_id = int(target_zone_raw) if target_zone_raw else None
+    tone_raw = request.form.get("tone_id", "")
+    tone_id = int(tone_raw) if tone_raw else None
     enabled = request.form.get("enabled") == "on"
 
     if not name:
@@ -51,11 +55,11 @@ def _save(rule_id: int | None) -> None:
         return
 
     if rule_id is None:
-        rules_model.create(name, municipios, categorias, target_zone_id, enabled)
+        rules_model.create(name, municipios, categorias, target_zone_id, tone_id, enabled)
         logger.info(f"Regla de alerta creada: {name!r}")
         flash(f"Regla {name!r} creada.", "success")
     else:
-        rules_model.update(rule_id, name, municipios, categorias, target_zone_id, enabled)
+        rules_model.update(rule_id, name, municipios, categorias, target_zone_id, tone_id, enabled)
         logger.info(f"Regla de alerta {rule_id} actualizada: {name!r}")
         flash("Regla actualizada.", "success")
 

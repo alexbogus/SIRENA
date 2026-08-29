@@ -9,10 +9,11 @@ from pathlib import Path
 import requests
 
 import config
+import models.tones as tones_model
 
 logger = config.get_logger("tts")
 
-DING_PATH = config.BASE_DIR / "static" / "audio" / "ding.wav"
+_TONES_DIR = config.BASE_DIR / "static" / "audio" / "tones"
 _SILENCE_MS = 200
 
 
@@ -41,14 +42,21 @@ def _resample_to_16k_mono(src_path: str, dst_path: str) -> None:
     )
 
 
-def build_alert_wav(text: str) -> str:
-    """Sintetiza `text` y lo concatena con el ding + silencio de preámbulo.
-    Devuelve la ruta a un WAV temporal 16kHz/mono/16-bit listo para
-    services/sender.py."""
+def build_alert_wav(text: str, tone_id: int | None = None) -> str:
+    """Sintetiza `text` y lo concatena con el tono + silencio de preámbulo.
+    `tone_id` selecciona un tono concreto (debe estar habilitado); si es
+    None, o el tono indicado no está habilitado, se usa el tono marcado por
+    defecto (models.tones). Devuelve la ruta a un WAV temporal
+    16kHz/mono/16-bit listo para services/sender.py."""
+    tone = tones_model.get(tone_id) if tone_id is not None else None
+    if tone is None or not tone["enabled"]:
+        tone = tones_model.get_default()
+    tone_path = _TONES_DIR / tone["filename"]
+
     speech_path = synthesize(text)
     out_fd = tempfile.NamedTemporaryFile(suffix="_alert.wav", delete=False)
     out_fd.close()
-    _concat_wavs([str(DING_PATH), speech_path], out_fd.name, silence_ms=_SILENCE_MS)
+    _concat_wavs([str(tone_path), speech_path], out_fd.name, silence_ms=_SILENCE_MS)
     Path(speech_path).unlink(missing_ok=True)
     return out_fd.name
 
