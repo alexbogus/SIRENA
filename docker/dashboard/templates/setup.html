@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Configuración inicial{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto mt-16 bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <h1 class="text-xl font-semibold mb-2 text-center">Configuración inicial</h1>
+    <p class="text-sm text-slate-400 mb-6 text-center">Establece la contraseña de acceso al centro de mando.</p>
+    <form method="post" class="space-y-4">
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">Contraseña (mínimo 8 caracteres)</label>
+            <input type="password" name="password" required minlength="8"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">Repite la contraseña</label>
+            <input type="password" name="confirm" required minlength="8"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-medium">
+            Establecer contraseña
+        </button>
+    </form>
+</div>
+{% endblock %}

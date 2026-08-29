@@ -1,0 +1,40 @@
+{% set editing = r is defined and r %}
+<form method="post" action="{{ url_for('rules.edit', rule_id=r.id) if editing else url_for('rules.create') }}" class="space-y-3">
+    <div>
+        <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+        <input name="name" value="{{ r.name if editing else '' }}" required
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+    </div>
+    <div>
+        <label class="block text-xs text-slate-400 mb-1">Municipios (vacío = todos)</label>
+        <select name="municipios" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-24">
+            {% for m in municipios %}
+            <option value="{{ m }}" {{ 'selected' if editing and m in r.municipios else '' }}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs text-slate-400 mb-1">Categorías (vacío = todas)</label>
+        <select name="categorias" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-24">
+            {% for path in category_paths %}
+            {% set joined = path|join('>') %}
+            <option value="{{ joined }}" {{ 'selected' if editing and path in r.categorias else '' }}>{{ path|join(' > ') }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs text-slate-400 mb-1">Destino</label>
+        <select name="target_zone_id" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="">Todos los altavoces</option>
+            {% for z in zones %}
+            <option value="{{ z.id }}" {{ 'selected' if editing and r.target_zone_id == z.id else '' }}>{{ z.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="enabled" {{ 'checked' if not editing or r.enabled else '' }}> Regla activa
+    </label>
+    <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">
+        {{ 'Guardar cambios' if editing else 'Crear regla' }}
+    </button>
+</form>

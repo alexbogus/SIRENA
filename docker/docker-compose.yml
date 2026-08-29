@@ -1,0 +1,25 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    network_mode: host
+    volumes:
+      - ./dashboard/data:/app/data
+      - ./dashboard/logs:/app/logs
+    environment:
+      - PIPER_URL=http://127.0.0.1:5100/synthesize
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    depends_on:
+      - piper
+
+  piper:
+    build:
+      context: ./piper
+    network_mode: host
+    volumes:
+      - ./piper/voices:/voices:ro
+    environment:
+      - PIPER_VOICE_MODEL=/voices/es_ES-davefx-medium.onnx
+    restart: unless-stopped

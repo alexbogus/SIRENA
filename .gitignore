@@ -14,6 +14,7 @@ sdkconfig.ci
 managed_components/
 dependencies.lock
 esp32s3-firmware/ip-speaker/main/wifi_credentials.h
+esp32s3-firmware/ip-speaker/.cache/
 
 # --- CMake / Build Systems ---
 CMakeCache.txt
@@ -21,3 +22,11 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 CMakeLists.txt.user
+
+# --- Centro de mando Docker (docker/dashboard, docker/piper) ---
+docker/dashboard/data/
+docker/dashboard/logs/
+docker/dashboard/tts_assets/
+docker/piper/voices/
+__pycache__/
+*.pyc

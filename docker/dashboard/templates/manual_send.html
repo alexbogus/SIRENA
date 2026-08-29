@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Enviar mensaje{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Enviar mensaje manual</h1>
+
+<form method="post" action="{{ url_for('manual_send.send') }}" class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 max-w-2xl">
+    <div>
+        <label class="block text-sm text-slate-400 mb-1">Texto a leer</label>
+        <textarea name="text" rows="4" required
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"
+                  placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
+    </div>
+
+    <div>
+        <label class="block text-sm text-slate-400 mb-2">Destino</label>
+        <label class="flex items-center gap-2 mb-2">
+            <input type="radio" name="target" value="all" checked id="target-all"> Todos los altavoces
+        </label>
+        <label class="flex items-center gap-2 mb-2">
+            <input type="radio" name="target" value="zones" id="target-zones"> Zonas concretas
+        </label>
+        <div id="zone-picker" class="ml-6 grid grid-cols-2 gap-2 opacity-50 pointer-events-none">
+            {% for z in zones %}
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="zone_ids" value="{{ z.id }}"> {{ z.name }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 font-medium flex items-center gap-2">
+        <i data-lucide="send" class="w-4 h-4"></i> Enviar
+    </button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const allRadio = document.getElementById("target-all");
+const zonesRadio = document.getElementById("target-zones");
+const picker = document.getElementById("zone-picker");
+function updatePicker() {
+    picker.classList.toggle("opacity-50", allRadio.checked);
+    picker.classList.toggle("pointer-events-none", allRadio.checked);
+}
+allRadio.addEventListener("change", updatePicker);
+zonesRadio.addEventListener("change", updatePicker);
+</script>
+{% endblock %}

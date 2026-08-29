@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+    <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-400">Alertas automáticas:</span>
+        <button id="auto-alerts-toggle"
+                class="px-3 py-1 rounded-full text-sm font-medium {{ 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' if auto_alerts_enabled else 'bg-amber-900/60 text-amber-300 border border-amber-700' }}"
+                data-enabled="{{ 'true' if auto_alerts_enabled else 'false' }}">
+            {{ 'ACTIVAS' if auto_alerts_enabled else 'PAUSADAS' }}
+        </button>
+    </div>
+    <div id="health-indicator" class="flex items-center gap-4 text-sm text-slate-400"></div>
+</div>
+
+<div id="speaker-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+<template id="speaker-card-template">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+        <div class="flex items-center justify-between">
+            <span class="font-semibold flex items-center gap-2">
+                <span class="dot w-2.5 h-2.5 rounded-full"></span>
+                <span class="name"></span>
+            </span>
+            <span class="state text-xs px-2 py-0.5 rounded-full bg-slate-800"></span>
+        </div>
+        <div class="text-xs text-slate-400 ip"></div>
+        <div class="text-xs text-slate-400 fw"></div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+            <div>RSSI: <span class="rssi text-slate-200"></span></div>
+            <div>Vol: <span class="volume text-slate-200"></span></div>
+        </div>
+        <div class="text-xs text-slate-400">Último msg altavoz: <span class="last-message-at text-slate-200"></span></div>
+        <div class="text-xs text-slate-400">Último healthcheck: <span class="last-healthcheck-at text-slate-200"></span></div>
+        <div class="text-xs text-slate-400">Uptime: <span class="uptime text-slate-200"></span></div>
+        <div class="border-t border-slate-800 pt-2 text-xs">
+            <div class="text-slate-400">Último mensaje enviado:</div>
+            <div class="sent-text text-slate-200 truncate"></div>
+            <div class="sent-status mt-1"></div>
+        </div>
+    </div>
+</template>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fmtUptime(sec) {
+    if (sec === null || sec === undefined) return "—";
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return `${h}h ${m}m`;
+}
+
+function deliveryBadge(status) {
+    if (status === "confirmed") return `<span class="text-emerald-400">✓ confirmado</span>`;
+    if (status === "unconfirmed") return `<span class="text-red-400">✗ no confirmado</span>`;
+    return `<span class="text-slate-500">… verificando</span>`;
+}
+
+function renderSpeakers(speakers) {
+    const grid = document.getElementById("speaker-grid");
+    const tpl = document.getElementById("speaker-card-template");
+    grid.innerHTML = "";
+    speakers.forEach(sp => {
+        const node = tpl.content.cloneNode(true);
+        node.querySelector(".name").textContent = sp.name;
+        node.querySelector(".ip").textContent = `IP ${sp.ip}`;
+        node.querySelector(".fw").textContent = sp.firmware_version ? `fw ${sp.firmware_version}` : "fw —";
+        node.querySelector(".rssi").textContent = sp.rssi_dbm !== null && sp.rssi_dbm !== undefined ? `${sp.rssi_dbm}dBm` : "—";
+        node.querySelector(".volume").textContent = sp.volume_percent !== null && sp.volume_percent !== undefined ? `${sp.volume_percent}%` : "—";
+        node.querySelector(".last-message-at").textContent = sp.last_message_at || "—";
+        node.querySelector(".last-healthcheck-at").textContent = sp.last_healthcheck_at || "—";
+        node.querySelector(".uptime").textContent = fmtUptime(sp.uptime_seconds);
+
+        const dot = node.querySelector(".dot");
+        const stateBadge = node.querySelector(".state");
+        if (!sp.online) {
+            dot.className = "dot w-2.5 h-2.5 rounded-full bg-slate-600";
+            stateBadge.textContent = "offline";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-500";
+        } else if (sp.state === "streaming") {
+            dot.className = "dot w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+            stateBadge.textContent = "streaming";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300";
+        } else {
+            dot.className = "dot w-2.5 h-2.5 rounded-full bg-sky-400";
+            stateBadge.textContent = "idle";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300";
+        }
+
+        if (sp.last_sent_message) {
+            node.querySelector(".sent-text").textContent = sp.last_sent_message.text;
+            node.querySelector(".sent-status").innerHTML = deliveryBadge(sp.last_sent_message.delivery_status);
+        } else {
+            node.querySelector(".sent-text").textContent = "—";
+        }
+        grid.appendChild(node);
+    });
+}
+
+function renderHealth(health) {
+    const el = document.getElementById("health-indicator");
+    const parts = [];
+    for (const [key, label] of [["cv112_feed", "Feed 112CV"], ["piper", "Piper"]]) {
+        const h = health[key];
+        if (!h) continue;
+        if (h.ok) {
+            parts.push(`<span class="text-emerald-400">${label}: OK</span>`);
+        } else {
+            parts.push(`<span class="text-red-400">⚠ ${label}: fallando (${h.consecutive_failures} intentos)</span>`);
+        }
+    }
+    el.innerHTML = parts.join(" · ");
+}
+
+async function refresh() {
+    try {
+        const resp = await fetch("{{ url_for('dashboard.api_speakers_status') }}");
+        const data = await resp.json();
+        renderSpeakers(data.speakers);
+        renderHealth(data.health);
+    } catch (e) {
+        console.error("Fallo al refrescar el dashboard", e);
+    }
+}
+
+document.getElementById("auto-alerts-toggle").addEventListener("click", async (e) => {
+    const resp = await fetch("{{ url_for('dashboard.toggle_auto_alerts') }}", {method: "POST"});
+    const data = await resp.json();
+    location.reload();
+});
+
+refresh();
+setInterval(refresh, 7000);
+</script>
+{% endblock %}
