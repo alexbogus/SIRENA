@@ -1,0 +1,22 @@
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+!*.code-workspace
+
+# ESP32-S3 / ESP-IDF
+build/
+sdkconfig.old
+sdkconfig.ci
+managed_components/
+dependencies.lock
+
+# --- CMake / Build Systems ---
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+CMakeLists.txt.user

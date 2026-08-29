@@ -1,0 +1,10 @@
+{
+  "idf.customExtraVars": {},
+  "clangd.path": "/Users/alexcasanova/.espressif/tools/esp-clangd/esp-21.1.3_20260408/esp-clangd/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=/Users/alexcasanova/Documents/github/esp32s3-ip-speaker-net/build"
+  ],
+  "idf.currentSetup": "/Users/alexcasanova/.espressif/v6.1/esp-idf"
+}
