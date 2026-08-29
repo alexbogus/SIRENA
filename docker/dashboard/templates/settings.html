@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Configuración</h1>
+
+<form method="post" action="{{ url_for('settings.save') }}" class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-6 max-w-lg">
+    <div>
+        <h2 class="font-medium mb-3">Intervalos de sondeo</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Lectura del feed del 112CV (segundos)</label>
+                <input type="number" name="cv112_poll_interval_s" value="{{ cv112_poll_interval_s }}"
+                       min="{{ min_poll }}" max="{{ max_poll }}"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Sondeo de /status de los altavoces (segundos)</label>
+                <input type="number" name="status_poll_interval_s" value="{{ status_poll_interval_s }}"
+                       min="{{ min_poll }}" max="{{ max_poll }}"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="font-medium mb-3">Retención de datos</h2>
+        <p class="text-xs text-slate-500 mb-3">
+            Se purgan automáticamente una vez al día. Solo afecta a mensajes enviados, errores de
+            altavoz y auditoría de altavoces/zonas -- no se guarda un log de los eventos del 112CV,
+            solo el estado técnico de deduplicación (con su propio período, ver abajo).
+        </p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) — días</label>
+                <input type="number" name="db_log_retention_days" value="{{ db_log_retention_days }}"
+                       min="{{ min_retention }}" max="{{ max_retention }}"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV — días</label>
+                <input type="number" name="dedupe_retention_days" value="{{ dedupe_retention_days }}"
+                       min="{{ min_retention }}" max="{{ max_retention }}"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            </div>
+        </div>
+    </div>
+
+    <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">
+        Guardar
+    </button>
+</form>
+{% endblock %}

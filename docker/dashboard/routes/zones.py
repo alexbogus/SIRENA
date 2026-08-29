@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 import config
+import models.audit as audit_model
 import models.zones as zones_model
 from routes.auth import login_required
 
@@ -24,6 +25,7 @@ def create():
     try:
         zones_model.create(name)
         logger.info(f"Zona creada: {name}")
+        audit_model.record("zone", "created", name)
         flash(f"Zona {name!r} creada.", "success")
     except Exception as exc:
         flash(f"No se pudo crear la zona: {exc}", "error")
@@ -33,7 +35,9 @@ def create():
 @bp.route("/<int:zone_id>/delete", methods=["POST"])
 @login_required
 def delete(zone_id: int):
+    zone = zones_model.get(zone_id)
     zones_model.delete(zone_id)
     logger.info(f"Zona {zone_id} eliminada")
+    audit_model.record("zone", "deleted", zone["name"] if zone else str(zone_id))
     flash("Zona eliminada.", "success")
     return redirect(url_for("zones.index"))

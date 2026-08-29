@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     source        TEXT NOT NULL,    -- 'manual' | 'auto_112cv'
     text          TEXT NOT NULL,
+    target_label  TEXT,             -- foto fija del destino en el momento del envío ("Todos", "Cocina, CECOM"...) -- no depende de que la zona siga existiendo
     rule_id       INTEGER REFERENCES alert_rules(id),
     incident_id   INTEGER,
     sent_at       TEXT NOT NULL DEFAULT (datetime('now'))
@@ -89,4 +90,40 @@ CREATE TABLE IF NOT EXISTS system_health (
     last_error_at           TEXT,
     last_error_message      TEXT,
     consecutive_failures    INTEGER NOT NULL DEFAULT 0
+);
+
+-- Catálogo de municipios y rutas de taxonomía vistos alguna vez en el feed
+-- del 112CV. A diferencia de processed_incidents (que se purga), estas dos
+-- tablas NUNCA se purgan: son el catálogo que puebla los desplegables de
+-- /rules y lo que permite detectar "categoría nueva" en cada poll sin
+-- depender de cuánto dedupe histórico sigue vivo. Crecimiento acotado (el
+-- número de municipios/categorías reales es pequeño y estable).
+CREATE TABLE IF NOT EXISTS known_municipios (
+    municipio     TEXT PRIMARY KEY,
+    first_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS known_taxonomy_paths (
+    raw_description TEXT PRIMARY KEY,  -- properties.description.es tal cual ("Incendio > Vegetación > Forestal")
+    first_seen_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Logs retenidos en BD (retención configurable, ver settings
+-- 'log_retention_days'). Deliberadamente NO incluye eventos crudos del
+-- feed 112CV -- eso vive solo en processed_incidents (dedupe, retención
+-- propia 'dedupe_retention_days') y en los logs de fichero.
+CREATE TABLE IF NOT EXISTS speaker_error_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    speaker_id  INTEGER REFERENCES speakers(id) ON DELETE CASCADE,
+    occurred_at TEXT NOT NULL DEFAULT (datetime('now')),
+    message     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at TEXT NOT NULL DEFAULT (datetime('now')),
+    entity_type TEXT NOT NULL,   -- 'speaker' | 'zone'
+    action      TEXT NOT NULL,   -- 'created' | 'updated' | 'deleted'
+    entity_name TEXT NOT NULL,
+    details     TEXT             -- texto libre, ej. "ip 10.0.1.56 -> 10.0.1.57"
 );

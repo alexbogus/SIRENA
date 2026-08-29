@@ -33,6 +33,26 @@ def new_correlation_id() -> str:
     return uuid.uuid4().hex[:8]
 
 
+def now_sql() -> str:
+    """Timestamp en hora local del servidor, formato 'YYYY-MM-DD HH:MM:SS'
+    (comparable con SQLite datetime('now'), pero en hora local en vez de
+    UTC -- consistente con el resto de timestamps de la app, ej. los del
+    firmware, que también son hora local)."""
+    import datetime
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def format_timestamp_es(sql_timestamp: str) -> str:
+    """'YYYY-MM-DD HH:MM:SS' -> 'DD/MM/YYYY - HH:MM:ss', mismo formato que
+    usa el firmware en /status."""
+    import datetime
+    try:
+        dt = datetime.datetime.strptime(sql_timestamp, "%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return sql_timestamp
+    return dt.strftime("%d/%m/%Y - %H:%M:%S")
+
+
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {

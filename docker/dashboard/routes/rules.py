@@ -3,6 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 import config
 import models.incidents as incidents_model
 import models.rules as rules_model
+import models.taxonomy as taxonomy_model
 import models.zones as zones_model
 from routes.auth import login_required
 
@@ -17,8 +18,8 @@ def index():
         "rules.html",
         rules=rules_model.list_all(),
         zones=zones_model.list_all(),
-        municipios=incidents_model.distinct_municipios(),
-        category_paths=incidents_model.distinct_category_paths(),
+        municipios=taxonomy_model.all_municipios(),
+        category_paths=taxonomy_model.all_category_paths(),
     )
 
 

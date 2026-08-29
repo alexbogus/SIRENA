@@ -14,7 +14,10 @@ import models.incidents as incidents_model
 import models.messages as messages_model
 import models.rules as rules_model
 import models.settings as settings_model
+import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
+import models.taxonomy as taxonomy_model
+import models.zones as zones_model
 from services.alert_text import build_alert_text
 from services.geocoding import polygon_centroid, reverse_geocode
 from services.sender import send_to_many
@@ -54,6 +57,21 @@ def poll_once(scheduler=None) -> None:
         _process_feature(feature, now_iso, correlation_id, scheduler)
 
 
+def _check_taxonomy_novelty(raw_description: str, municipio: str, correlation_id: str) -> None:
+    """Compara contra el catálogo permanente de municipios/categorías
+    vistos (models/taxonomy.py, nunca se purga) y loguea cuando aparece
+    algo nuevo, para que el operador sepa que puede ampliar el árbol de
+    frases de alert_text.py o afinar las reglas."""
+    if raw_description and not taxonomy_model.is_known_taxonomy_path(raw_description):
+        logger.info(f"Taxonomía: nueva categoría detectada en el feed: {raw_description!r}",
+                     extra={"correlation_id": correlation_id})
+        taxonomy_model.remember_taxonomy_path(raw_description)
+    if municipio and not taxonomy_model.is_known_municipio(municipio):
+        logger.info(f"Taxonomía: nuevo municipio detectado en el feed: {municipio!r}",
+                     extra={"correlation_id": correlation_id})
+        taxonomy_model.remember_municipio(municipio)
+
+
 def _process_feature(feature: dict, now_iso: str, correlation_id: str, scheduler) -> None:
     props = feature.get("properties", {})
     incident_id = props.get("id")
@@ -70,6 +88,7 @@ def _process_feature(feature: dict, now_iso: str, correlation_id: str, scheduler
     if record is not None and record["last_raw_description"] == raw_description:
         return  # ya evaluado con esta misma categoría, no hace falta repetir
 
+    _check_taxonomy_novelty(raw_description, municipio, correlation_id)
     incidents_model.upsert_seen(incident_id, raw_description, municipio, now_iso)
 
     if not settings_model.auto_alerts_enabled():
@@ -107,6 +126,12 @@ def _announce(incident_id: int, props: dict, geometry: dict | None, rule: dict,
 
     text = build_alert_text(raw_description, municipio, street_ref)
 
+    if rule["target_zone_id"]:
+        zone = zones_model.get(rule["target_zone_id"])
+        target_label = zone["name"] if zone else "—"
+    else:
+        target_label = "Todos"
+
     targets = speakers_model.resolve_targets(
         zone_ids=[rule["target_zone_id"]] if rule["target_zone_id"] else None,
         all_speakers=rule["target_zone_id"] is None,
@@ -125,13 +150,17 @@ def _announce(incident_id: int, props: dict, geometry: dict | None, rule: dict,
 
     speaker_ids = [t["id"] for t in targets]
     message_id = messages_model.create(
-        source="auto_112cv", text=text, speaker_ids=speaker_ids, rule_id=rule["id"], incident_id=incident_id
+        source="auto_112cv", text=text, speaker_ids=speaker_ids, target_label=target_label,
+        rule_id=rule["id"], incident_id=incident_id,
     )
     sent_at = datetime.datetime.now().isoformat(timespec="seconds")
 
     send_results = send_to_many([(t["id"], t["ip"], t["port"]) for t in targets], wav_path)
     for speaker_id, ok in send_results.items():
         messages_model.set_send_result(message_id, speaker_id, ok)
+        if not ok:
+            speaker_name = next((t["name"] for t in targets if t["id"] == speaker_id), speaker_id)
+            speaker_errors_model.record(speaker_id, f"Fallo al enviar alerta 112CV (incidente {incident_id}) a {speaker_name!r}")
     Path(wav_path).unlink(missing_ok=True)
 
     incidents_model.mark_announced(incident_id, rule["id"], message_id)

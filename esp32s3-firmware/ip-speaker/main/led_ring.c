@@ -15,10 +15,10 @@ static const char *TAG = "led_ring";
 #define TAIL_LEN       (3)
 #define STEP_DELAY_MS  (45) // ~315ms por vuelta completa (7 LEDs), ritmo tipo "spinner"
 
-// Rojo/naranja de alerta (contexto Protección Civil, no el cian de Alexa).
-#define HEAD_R (255)
-#define HEAD_G (60)
-#define HEAD_B (0)
+// Azul tipo Alexa.
+#define HEAD_R (0)
+#define HEAD_G (120)
+#define HEAD_B (255)
 
 static led_strip_handle_t s_strip;
 static volatile bool s_active = false;
@@ -67,7 +67,10 @@ esp_err_t led_ring_init(void)
         .strip_gpio_num = BOARD_LED_STRIP_GPIO,
         .max_leds = BOARD_LED_STRIP_LED_COUNT,
         .led_model = LED_MODEL_WS2812,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+        // El anillo de esta placa resultó ser RGB, no el GRB estándar de
+        // WS2812 (con GRB el rojo salía verde) -- confirmado visualmente en
+        // hardware real.
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_RGB,
     };
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,

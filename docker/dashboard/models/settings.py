@@ -8,7 +8,19 @@ _DEFAULTS = {
     "auto_alerts_enabled": "1",
     "cv112_poll_interval_s": str(config.DEFAULT_CV112_POLL_INTERVAL_S),
     "status_poll_interval_s": str(config.DEFAULT_STATUS_POLL_INTERVAL_S),
+    # Retención en BD de mensajes/errores de altavoz/auditoría (Fase 9c).
+    "db_log_retention_days": "90",
+    # Retención del estado de dedupe del 112CV (processed_incidents). Se
+    # gestiona por separado del retention de logs porque cumple una función
+    # distinta (evitar reenvíos), no es un log de auditoría.
+    "dedupe_retention_days": "90",
 }
+
+# Límites razonables para los campos numéricos editables desde /settings.
+MIN_POLL_INTERVAL_S = 10
+MAX_POLL_INTERVAL_S = 3600
+MIN_RETENTION_DAYS = 1
+MAX_RETENTION_DAYS = 3650
 
 
 def get(key: str) -> str | None:
@@ -58,3 +70,11 @@ def cv112_poll_interval_s() -> int:
 
 def status_poll_interval_s() -> int:
     return int(get("status_poll_interval_s"))
+
+
+def db_log_retention_days() -> int:
+    return int(get("db_log_retention_days"))
+
+
+def dedupe_retention_days() -> int:
+    return int(get("dedupe_retention_days"))

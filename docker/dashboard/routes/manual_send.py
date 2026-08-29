@@ -5,6 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 import config
 import models.messages as messages_model
+import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
 import models.zones as zones_model
 from routes.auth import login_required
@@ -38,6 +39,12 @@ def send():
         flash("No hay altavoces en el destino seleccionado.", "error")
         return redirect(url_for("manual_send.index"))
 
+    if all_speakers:
+        target_label = "Todos"
+    else:
+        zone_names = [z["name"] for z in zones_model.list_all() if z["id"] in zone_ids]
+        target_label = ", ".join(zone_names) if zone_names else "—"
+
     try:
         wav_path = _synthesize_plain(text)
     except Exception:
@@ -46,12 +53,16 @@ def send():
         return redirect(url_for("manual_send.index"))
 
     speaker_ids = [t["id"] for t in targets]
-    message_id = messages_model.create(source="manual", text=text, speaker_ids=speaker_ids)
+    message_id = messages_model.create(source="manual", text=text, speaker_ids=speaker_ids,
+                                        target_label=target_label)
     sent_at = datetime.datetime.now().isoformat(timespec="seconds")
 
     send_results = send_to_many([(t["id"], t["ip"], t["port"]) for t in targets], wav_path)
     for speaker_id, ok in send_results.items():
         messages_model.set_send_result(message_id, speaker_id, ok)
+        if not ok:
+            speaker_name = next((t["name"] for t in targets if t["id"] == speaker_id), speaker_id)
+            speaker_errors_model.record(speaker_id, f"Fallo al enviar mensaje manual a {speaker_name!r}")
     Path(wav_path).unlink(missing_ok=True)
 
     schedule_confirmations(scheduler, message_id, sent_at)

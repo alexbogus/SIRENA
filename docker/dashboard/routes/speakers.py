@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 import config
+import models.audit as audit_model
 import models.speakers as speakers_model
 import models.zones as zones_model
 from routes.auth import login_required
@@ -28,6 +29,7 @@ def create():
     try:
         speakers_model.create(name, ip, port, zone_ids)
         logger.info(f"Altavoz creado: {name} ({ip}:{port})")
+        audit_model.record("speaker", "created", name, f"ip={ip} port={port}")
         flash(f"Altavoz {name!r} añadido.", "success")
     except Exception as exc:
         flash(f"No se pudo crear el altavoz: {exc}", "error")
@@ -41,9 +43,12 @@ def edit(speaker_id: int):
     ip = request.form.get("ip", "").strip()
     port = int(request.form.get("port") or 5005)
     zone_ids = [int(z) for z in request.form.getlist("zone_ids")]
+    before = speakers_model.get(speaker_id)
     try:
         speakers_model.update(speaker_id, name, ip, port, zone_ids)
         logger.info(f"Altavoz {speaker_id} actualizado: {name} ({ip}:{port})")
+        details = f"ip={before['ip'] if before else '?'}->{ip} port={before['port'] if before else '?'}->{port}"
+        audit_model.record("speaker", "updated", name, details)
         flash("Altavoz actualizado.", "success")
     except Exception as exc:
         flash(f"No se pudo actualizar el altavoz: {exc}", "error")
@@ -53,7 +58,10 @@ def edit(speaker_id: int):
 @bp.route("/<int:speaker_id>/delete", methods=["POST"])
 @login_required
 def delete(speaker_id: int):
+    sp = speakers_model.get(speaker_id)
     speakers_model.delete(speaker_id)
     logger.info(f"Altavoz {speaker_id} eliminado")
+    audit_model.record("speaker", "deleted", sp["name"] if sp else str(speaker_id),
+                        f"ip={sp['ip']}" if sp else None)
     flash("Altavoz eliminado.", "success")
     return redirect(url_for("speakers.index"))

@@ -19,6 +19,7 @@ def _speaker_view(sp: dict) -> dict:
     sp["last_sent_message"] = last_message
     # Se considera offline si el último poll falló o si nunca se ha podido consultar.
     sp["online"] = bool(sp.get("last_poll_ok"))
+    sp["history"] = messages_model.history_for_speaker(sp["id"])
     return sp
 
 

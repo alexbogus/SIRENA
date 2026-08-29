@@ -11,6 +11,7 @@ import db
 import models.settings as settings_model
 from scheduler import scheduler
 from services.cv112_poller import poll_once as cv112_poll_once
+from services.log_retention import run_once as log_retention_run_once
 from services.status_poller import poll_once as status_poll_once
 
 config.configure_logging()
@@ -28,6 +29,7 @@ def create_app() -> Flask:
     from routes.zones import bp as zones_bp
     from routes.manual_send import bp as manual_send_bp
     from routes.rules import bp as rules_bp
+    from routes.settings import bp as settings_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -35,6 +37,7 @@ def create_app() -> Flask:
     app.register_blueprint(zones_bp)
     app.register_blueprint(manual_send_bp)
     app.register_blueprint(rules_bp)
+    app.register_blueprint(settings_bp)
 
     _start_scheduler()
     return app
@@ -62,8 +65,12 @@ def _start_scheduler() -> None:
         lambda: cv112_poll_once(scheduler), "interval", seconds=settings_model.cv112_poll_interval_s(),
         id="cv112_poller", max_instances=1, coalesce=True,
     )
+    scheduler.add_job(
+        log_retention_run_once, "cron", hour=3, minute=0,
+        id="log_retention", max_instances=1, coalesce=True,
+    )
     scheduler.start()
-    logger.info("Scheduler arrancado (status_poller + cv112_poller)")
+    logger.info("Scheduler arrancado (status_poller + cv112_poller + log_retention)")
 
 
 app = create_app()

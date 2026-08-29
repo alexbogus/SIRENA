@@ -58,24 +58,11 @@ def recent_log(limit: int = 200) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def distinct_municipios() -> list[str]:
+def purge_older_than(cutoff_iso: str) -> int:
+    """Purga incidentes vistos por última vez antes de cutoff_iso. Ver
+    models/settings.dedupe_retention_days(). Riesgo aceptado y documentado:
+    el feed del 112CV solo lista incidentes activos, así que un id purgado
+    hace mucho reaparecería solo en el caso raro de una reapertura tardía."""
     with db_cursor() as cur:
-        rows = cur.execute(
-            "SELECT DISTINCT last_municipio FROM processed_incidents WHERE last_municipio IS NOT NULL"
-        ).fetchall()
-    return sorted({r["last_municipio"] for r in rows if r["last_municipio"]})
-
-
-def distinct_category_paths() -> list[list[str]]:
-    """Rutas de taxonomía distintas vistas hasta ahora, para poblar el
-    desplegable de categorías del formulario de reglas."""
-    with db_cursor() as cur:
-        rows = cur.execute(
-            "SELECT DISTINCT last_raw_description FROM processed_incidents WHERE last_raw_description IS NOT NULL"
-        ).fetchall()
-    paths = set()
-    for r in rows:
-        desc = r["last_raw_description"]
-        if desc:
-            paths.add(tuple(p.strip() for p in desc.split(">")))
-    return sorted([list(p) for p in paths])
+        cur.execute("DELETE FROM processed_incidents WHERE last_checked_at < ?", (cutoff_iso,))
+        return cur.rowcount

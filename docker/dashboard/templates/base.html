@@ -22,6 +22,7 @@
                 <a href="{{ url_for('manual_send.index') }}" class="hover:text-emerald-400">Enviar mensaje</a>
                 <a href="{{ url_for('rules.index') }}" class="hover:text-emerald-400">Reglas 112CV</a>
                 <a href="{{ url_for('rules.log') }}" class="hover:text-emerald-400">Histórico</a>
+                <a href="{{ url_for('settings.index') }}" class="hover:text-emerald-400">Configuración</a>
                 <form method="post" action="{{ url_for('auth.logout') }}">
                     <button class="text-slate-400 hover:text-red-400 flex items-center gap-1">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Salir
