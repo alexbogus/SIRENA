@@ -25,11 +25,13 @@ _DEFAULT_TONES = [
 ]
 
 # Tonos añadidos después del primer arranque de instalaciones ya existentes
-# (donde _seed_default_tones ya no actúa porque la tabla no está vacía).
-# Se insertan por nombre de archivo si no existen todavía -- igual de
-# idempotente que _COLUMN_MIGRATIONS, sin sistema de migraciones formal.
+# (donde _seed_default_tones ya no actúa porque la tabla no está vacía). Cada
+# uno se inserta como mucho una vez: se marca en `settings` con la key de
+# abajo para no resucitarlo si el usuario lo borra luego desde /settings
+# (comprobar solo "¿existe ya en `tones`?" resucitaba el tono -- sin su WAV,
+# porque el borrado real si se lo había cargado -- en cada reinicio).
 _ADDITIONAL_TONES = [
-    ("Selectiva", "selectiva.wav"),
+    ("tones_seeded_selectiva", "Selectiva", "selectiva.wav"),
 ]
 
 
@@ -63,13 +65,23 @@ def _seed_default_tones(conn: sqlite3.Connection) -> None:
 
 
 def _seed_additional_tones(conn: sqlite3.Connection) -> None:
-    existing = {row["filename"] for row in conn.execute("SELECT filename FROM tones")}
-    for name, filename in _ADDITIONAL_TONES:
-        if filename not in existing:
+    seeded = {
+        row["key"]
+        for row in conn.execute("SELECT key FROM settings WHERE key LIKE 'tones_seeded_%'")
+    }
+    existing_filenames = {row["filename"] for row in conn.execute("SELECT filename FROM tones")}
+    for marker_key, name, filename in _ADDITIONAL_TONES:
+        if marker_key in seeded:
+            continue
+        # Backfill: si la fila ya existe (instalaciones que arrancaron con
+        # esta versión antes de que existiera el marcador), no duplicar --
+        # solo marcar como sembrado.
+        if filename not in existing_filenames:
             conn.execute(
                 "INSERT INTO tones(name, filename, enabled, is_default) VALUES (?, ?, 1, 0)",
                 (name, filename),
             )
+        conn.execute("INSERT INTO settings(key, value) VALUES (?, '1')", (marker_key,))
 
 
 def get_connection() -> sqlite3.Connection:
