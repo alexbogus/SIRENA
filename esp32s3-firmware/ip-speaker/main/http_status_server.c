@@ -14,7 +14,6 @@
 #include "udp_audio_server.h"
 
 static const char *TAG = "http_status_server";
-static ring_buffer_t *s_rb = NULL;
 
 static esp_err_t status_get_handler(httpd_req_t *req)
 {
@@ -27,7 +26,7 @@ static esp_err_t status_get_handler(httpd_req_t *req)
     int volume_percent = 0;
     audio_codec_get_volume(&volume_percent);
 
-    const char *state = ring_buffer_bytes_available(s_rb) > 0 ? "streaming" : "idle";
+    const char *state = udp_audio_server_is_streaming() ? "streaming" : "idle";
 
     char last_message_at[24];
     int64_t last_msg_ms = udp_audio_server_get_last_message_time_ms();
@@ -118,10 +117,8 @@ static esp_err_t volume_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-esp_err_t http_status_server_start(ring_buffer_t *rb)
+esp_err_t http_status_server_start(void)
 {
-    s_rb = rb;
-
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
     esp_err_t err = httpd_start(&server, &config);

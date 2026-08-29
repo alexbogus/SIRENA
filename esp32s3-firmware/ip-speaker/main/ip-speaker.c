@@ -51,7 +51,7 @@ void app_main(void)
     audio_codec_set_pa_enabled(true);
     ESP_ERROR_CHECK(i2s_player_start(&s_ring_buffer));
     ESP_ERROR_CHECK(udp_audio_server_start(&s_ring_buffer));
-    ESP_ERROR_CHECK(http_status_server_start(&s_ring_buffer));
+    ESP_ERROR_CHECK(http_status_server_start());
 
     ESP_LOGI(TAG, "Listo. Envía PCM 16kHz/mono/16-bit por UDP al puerto %d, status en http://%s/status",
              UDP_AUDIO_SERVER_PORT, ip_str);

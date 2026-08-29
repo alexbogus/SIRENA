@@ -1,23 +1,141 @@
 #include "udp_audio_server.h"
+#include "protocol.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 static const char *TAG = "udp_audio_server";
-static volatile int64_t s_last_message_time_ms = 0;
 
 #define RX_TASK_STACK (4096)
 #define RX_TASK_PRIO  (10)
 #define RX_TASK_CORE  (0)
 #define RX_BUF_SIZE   (1472) // por debajo del MTU típico de WiFi (evita fragmentación IP)
 
+static volatile int64_t s_last_message_time_ms = 0;
+static volatile bool s_streaming = false;
+static bool s_has_expected_seq = false;
+static uint32_t s_expected_seq = 0;
+static volatile uint32_t s_lost_packets = 0;
+
 typedef struct {
     ring_buffer_t *rb;
 } udp_rx_ctx_t;
+
+static uint32_t read_be32(const uint8_t *p)
+{
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+}
+
+static uint16_t read_be16(const uint8_t *p)
+{
+    return ((uint16_t)p[0] << 8) | p[1];
+}
+
+static void write_be32(uint8_t *p, uint32_t v)
+{
+    p[0] = (v >> 24) & 0xFF;
+    p[1] = (v >> 16) & 0xFF;
+    p[2] = (v >> 8) & 0xFF;
+    p[3] = v & 0xFF;
+}
+
+static void write_be16(uint8_t *p, uint16_t v)
+{
+    p[0] = (v >> 8) & 0xFF;
+    p[1] = v & 0xFF;
+}
+
+static bool parse_header(const uint8_t *buf, int len, audio_packet_header_t *out)
+{
+    if (len < PROTOCOL_HEADER_SIZE) {
+        return false;
+    }
+    out->magic = read_be32(buf + 0);
+    out->version = buf[4];
+    out->frame_type = buf[5];
+    out->reserved = read_be16(buf + 6);
+    out->seq_num = read_be32(buf + 8);
+    out->payload_len = read_be32(buf + 12);
+    return out->magic == PROTOCOL_MAGIC && out->version == PROTOCOL_VERSION;
+}
+
+static void send_pong(int sock, const struct sockaddr_in *dest, socklen_t socklen, uint32_t seq_num)
+{
+    uint8_t reply[PROTOCOL_HEADER_SIZE];
+    write_be32(reply + 0, PROTOCOL_MAGIC);
+    reply[4] = PROTOCOL_VERSION;
+    reply[5] = FRAME_PONG;
+    write_be16(reply + 6, 0);
+    write_be32(reply + 8, seq_num);
+    write_be32(reply + 12, 0);
+    sendto(sock, reply, sizeof(reply), 0, (const struct sockaddr *)dest, socklen);
+}
+
+static void handle_packet(int sock, ring_buffer_t *rb, const uint8_t *buf, int len,
+                           const struct sockaddr_in *source_addr, socklen_t socklen)
+{
+    audio_packet_header_t header;
+    if (!parse_header(buf, len, &header)) {
+        ESP_LOGW(TAG, "Paquete descartado: cabecera inválida (magic/version) o demasiado corto (%d bytes)", len);
+        return;
+    }
+
+    const uint8_t *payload = buf + PROTOCOL_HEADER_SIZE;
+    int payload_len = len - PROTOCOL_HEADER_SIZE;
+
+    switch (header.frame_type) {
+    case FRAME_START:
+        ring_buffer_reset(rb); // interrumpe cualquier stream en curso: la alarma más reciente prima
+        s_expected_seq = header.seq_num + 1;
+        s_has_expected_seq = true;
+        s_streaming = true;
+        s_last_message_time_ms = esp_timer_get_time() / 1000;
+        ESP_LOGI(TAG, "Nuevo stream (seq=%u)", (unsigned) header.seq_num);
+        break;
+
+    case FRAME_AUDIO:
+        if (s_has_expected_seq && header.seq_num != s_expected_seq) {
+            if (header.seq_num > s_expected_seq) {
+                uint32_t lost = header.seq_num - s_expected_seq;
+                s_lost_packets += lost;
+                ESP_LOGW(TAG, "%u paquete(s) perdido(s) (esperado seq=%u, recibido seq=%u)",
+                         (unsigned) lost, (unsigned) s_expected_seq, (unsigned) header.seq_num);
+            } else {
+                ESP_LOGW(TAG, "Paquete fuera de orden/duplicado (esperado seq=%u, recibido seq=%u)",
+                         (unsigned) s_expected_seq, (unsigned) header.seq_num);
+            }
+        }
+        s_expected_seq = header.seq_num + 1;
+        s_has_expected_seq = true;
+        if (payload_len > 0) {
+            ring_buffer_write(rb, payload, (size_t) payload_len);
+        }
+        s_last_message_time_ms = esp_timer_get_time() / 1000;
+        break;
+
+    case FRAME_END:
+        s_streaming = false;
+        ESP_LOGI(TAG, "Fin de stream (seq=%u)", (unsigned) header.seq_num);
+        break;
+
+    case FRAME_PING:
+        send_pong(sock, source_addr, socklen, header.seq_num);
+        break;
+
+    case FRAME_PONG:
+        break; // el firmware nunca debería recibir esto; se ignora
+
+    default:
+        ESP_LOGW(TAG, "Tipo de frame desconocido: %u", header.frame_type);
+        break;
+    }
+}
 
 static void udp_rx_task(void *arg)
 {
@@ -52,14 +170,8 @@ static void udp_rx_task(void *arg)
             ESP_LOGE(TAG, "recvfrom() falló: errno %d", errno);
             continue;
         }
-        ring_buffer_write(ctx->rb, rx_buffer, (size_t) len);
-        s_last_message_time_ms = esp_timer_get_time() / 1000;
+        handle_packet(sock, ctx->rb, rx_buffer, len, &source_addr, socklen);
     }
-}
-
-int64_t udp_audio_server_get_last_message_time_ms(void)
-{
-    return s_last_message_time_ms;
 }
 
 esp_err_t udp_audio_server_start(ring_buffer_t *rb)
@@ -69,4 +181,19 @@ esp_err_t udp_audio_server_start(ring_buffer_t *rb)
     BaseType_t ok = xTaskCreatePinnedToCore(udp_rx_task, "udp_rx", RX_TASK_STACK,
                                              &ctx, RX_TASK_PRIO, NULL, RX_TASK_CORE);
     return ok == pdPASS ? ESP_OK : ESP_FAIL;
+}
+
+int64_t udp_audio_server_get_last_message_time_ms(void)
+{
+    return s_last_message_time_ms;
+}
+
+bool udp_audio_server_is_streaming(void)
+{
+    return s_streaming;
+}
+
+uint32_t udp_audio_server_get_lost_packets(void)
+{
+    return s_lost_packets;
 }
