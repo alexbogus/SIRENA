@@ -9,19 +9,19 @@
 {% set selected_str = selected_values|map('string')|list %}
 <div class="relative" data-dropdown-checklist>
     <button type="button"
-            class="w-full flex items-center justify-between gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-left hover:border-slate-600">
+            class="w-full flex items-center justify-between gap-2 bg-navy-950 border border-navy-700 rounded-lg px-3 py-2 text-sm text-left hover:border-navy-600">
         <span data-dropdown-label data-placeholder="{{ placeholder }}" class="truncate">{{ placeholder }}</span>
         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
     </button>
     <div data-dropdown-panel
-         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-2 space-y-0.5">
+         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-navy-900 border border-navy-700 rounded-lg shadow-lg p-2 space-y-0.5">
         {% for item in items %}
         {% set value = item[value_attr] %}
         {% set label = item[label_attr] %}
-        <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-700 text-sm cursor-pointer">
+        <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-navy-800 text-sm cursor-pointer">
             <input type="checkbox" name="{{ name }}" value="{{ value }}" data-label="{{ label }}"
                    {{ 'checked' if value|string in selected_str else '' }}
-                   class="rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0">
+                   class="rounded border-navy-600 bg-navy-950 text-brand focus:ring-brand focus:ring-offset-0">
             <span>{{ label }}</span>
         </label>
         {% else %}

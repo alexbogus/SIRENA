@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="text-xl font-semibold mb-4">Configuración</h1>
 
-<form method="post" action="{{ url_for('settings.save') }}" class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-6 max-w-lg">
+<form method="post" action="{{ url_for('settings.save') }}" class="bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-6 max-w-lg">
     <div>
         <h2 class="font-medium mb-3">Intervalos de sondeo</h2>
         <div class="space-y-3">
@@ -11,13 +11,13 @@
                 <label class="block text-xs text-slate-400 mb-1">Lectura del feed del 112CV (segundos)</label>
                 <input type="number" name="cv112_poll_interval_s" value="{{ cv112_poll_interval_s }}"
                        min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">Sondeo de /status de los altavoces (segundos)</label>
                 <input type="number" name="status_poll_interval_s" value="{{ status_poll_interval_s }}"
                        min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
             </div>
         </div>
     </div>
@@ -34,23 +34,23 @@
                 <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) — días</label>
                 <input type="number" name="db_log_retention_days" value="{{ db_log_retention_days }}"
                        min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV — días</label>
                 <input type="number" name="dedupe_retention_days" value="{{ dedupe_retention_days }}"
                        min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
             </div>
         </div>
     </div>
 
-    <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">
+    <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
         Guardar
     </button>
 </form>
 
-<div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
     <div>
         <h2 class="font-medium mb-1">Tonos</h2>
         <p class="text-xs text-slate-500">
@@ -61,13 +61,13 @@
 
     <div class="space-y-2">
         {% for t in tones %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-slate-800/60 border border-slate-800 rounded-lg px-3 py-2">
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-navy-800 rounded-lg px-3 py-2">
             <div class="flex items-center gap-2 min-w-[140px]">
                 <span class="text-sm">{{ t.name }}</span>
                 {% if t.is_default %}
                 <span class="text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300">por defecto</span>
                 {% endif %}
-                <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-emerald-900/60 text-emerald-300' if t.enabled else 'bg-slate-800 text-slate-500' }}">
+                <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-emerald-900/60 text-emerald-300' if t.enabled else 'bg-navy-800 text-slate-500' }}">
                     {{ 'habilitado' if t.enabled else 'deshabilitado' }}
                 </span>
             </div>
@@ -106,17 +106,17 @@
     </div>
 
     <form method="post" action="{{ url_for('settings.tones_upload') }}" enctype="multipart/form-data"
-          class="flex gap-2 items-end pt-2 border-t border-slate-800 flex-wrap">
+          class="flex gap-2 items-end pt-2 border-t border-navy-800 flex-wrap">
         <div class="flex-1 min-w-[140px]">
             <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <input name="name" required class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm">
         </div>
         <div class="flex-1 min-w-[160px]">
             <label class="block text-xs text-slate-400 mb-1">Archivo .wav</label>
             <input type="file" name="file" accept="audio/wav,.wav" required
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                   class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-1.5 text-sm">
         </div>
-        <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">
+        <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
             Subir
         </button>
     </form>

@@ -1,44 +1,92 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="sirena">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dashboard{% endblock %} · CECOM - Megafonía IP</title>
+    <title>{% block title %}Panel{% endblock %} · SIRENA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    navy: {
+                        950: '#050d1c',
+                        900: '#0a1830',
+                        850: '#0e2042',
+                        800: '#132a52',
+                        700: '#1c3a6c',
+                        600: '#2a4d8a',
+                    },
+                    brand: {
+                        DEFAULT: '#f2711c',
+                        soft: '#ffb27a',
+                        dark: '#c65613',
+                    },
+                },
+                fontFamily: {
+                    sans: ['"Public Sans"', 'system-ui', 'sans-serif'],
+                    display: ['"Barlow Condensed"', 'system-ui', 'sans-serif'],
+                },
+            },
+        },
+    }
+    </script>
     <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-    {% if session.get('authenticated') %}
-    <header class="border-b border-slate-800 bg-slate-900">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-            <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2 font-semibold text-lg">
-                <i data-lucide="radio-tower" class="w-5 h-5 text-emerald-400"></i>
-                CECOM - Megafonía IP
-            </a>
-            <nav class="flex items-center gap-4 text-sm">
-                <a href="{{ url_for('dashboard.index') }}" class="hover:text-emerald-400">Dashboard</a>
-                <a href="{{ url_for('speakers.index') }}" class="hover:text-emerald-400">Altavoces</a>
-                <a href="{{ url_for('zones.index') }}" class="hover:text-emerald-400">Zonas</a>
-                <a href="{{ url_for('manual_send.index') }}" class="hover:text-emerald-400">Enviar mensaje</a>
-                <a href="{{ url_for('rules.index') }}" class="hover:text-emerald-400">Reglas 112CV</a>
-                <a href="{{ url_for('rules.log') }}" class="hover:text-emerald-400">Histórico</a>
-                <a href="{{ url_for('settings.index') }}" class="hover:text-emerald-400">Configuración</a>
-                <form method="post" action="{{ url_for('auth.logout') }}">
-                    <button class="text-slate-400 hover:text-red-400 flex items-center gap-1">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> Salir
-                    </button>
-                </form>
-            </nav>
-        </div>
-    </header>
-    {% endif %}
+    <style>
+        h1, h2, h3, .font-display { font-family: 'Barlow Condensed', system-ui, sans-serif; }
 
-    <main class="max-w-6xl mx-auto px-4 py-6">
+        /* Tema daisyUI "sirena": navy marino + naranja de Protección Civil.
+           daisyUI v4 espera los colores en OKLCH ("L% C H"), no en HSL:
+           sus componentes hacen oklch(var(--p)) internamente, así que un
+           triplete HSL ahí dentro produce un color inválido (botones
+           transparentes/sin color). Valores convertidos desde los HSL
+           originales para mantener la misma paleta. */
+        [data-theme="sirena"] {
+            color-scheme: dark;
+            --p: 69.56% 0.1737 48.69;    /* primary = naranja de marca */
+            --pc: 19.35% 0.0211 47.60;
+            --s: 37.21% 0.0864 254.85;   /* secondary = navy-700 */
+            --sc: 96.76% 0.0070 247.90;
+            --a: 83.32% 0.1069 54.40;    /* accent = naranja suave */
+            --ac: 19.35% 0.0211 47.60;
+            --n: 25.32% 0.0696 261.53;   /* neutral = navy-850 */
+            --nc: 96.76% 0.0070 247.90;
+            --b1: 15.40% 0.0314 262.27;  /* base-100 = navy-950 */
+            --b2: 21.01% 0.0460 259.50;  /* base-200 = navy-900 */
+            --b3: 29.57% 0.0761 259.50;  /* base-300 = navy-800 */
+            --bc: 93.51% 0.0141 247.98;
+            --rounded-box: 1rem;
+            --rounded-btn: 0.6rem;
+        }
+    </style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen font-sans">
+    {% if session.get('authenticated') %}
+    <div class="drawer lg:drawer-open">
+        <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
+        <div class="drawer-content flex flex-col">
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b border-navy-800 bg-navy-900">
+                <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f2711c" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z" stroke-linejoin="round"/><path d="M9 12a3 3 0 0 0 6 0" stroke-linecap="round"/></svg>
+                    <span class="font-display font-bold text-lg leading-none">SIRENA</span>
+                </a>
+                <label for="sidebar-drawer" class="btn btn-sm btn-square btn-ghost">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </label>
+            </div>
+            <main class="max-w-6xl w-full mx-auto px-6 py-8">
+    {% else %}
+    <main>
+    {% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mb-4 space-y-2">
+                <div class="mb-4 space-y-2 {{ '' if session.get('authenticated') else 'max-w-sm mx-auto px-4 pt-6' }}">
                 {% for category, message in messages %}
-                    <div class="px-4 py-2 rounded-lg text-sm {{ 'bg-red-900/50 text-red-200 border border-red-800' if category == 'error' else 'bg-emerald-900/50 text-emerald-200 border border-emerald-800' }}">
+                    <div class="alert {{ 'alert-error' if category == 'error' else 'alert-success' }} text-sm py-2">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -46,16 +94,55 @@
             {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
+    {% if session.get('authenticated') %}
+            </main>
+        </div>
+        <div class="drawer-side z-20">
+            <label for="sidebar-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
+            <aside class="w-60 min-h-full bg-navy-900 border-r border-navy-800 flex flex-col">
+                <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2 px-5 py-5">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f2711c" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z" stroke-linejoin="round"/><path d="M9 12a3 3 0 0 0 6 0" stroke-linecap="round"/></svg>
+                    <span class="font-display font-bold text-lg leading-none">SIRENA</span>
+                </a>
+                <ul class="menu flex-1 px-3 gap-1 text-sm flex-nowrap">
+                    {% set nav_items = [
+                        ('dashboard.index', 'layout-dashboard', 'Panel'),
+                        ('speakers.index', 'radio-tower', 'Altavoces'),
+                        ('zones.index', 'map-pin', 'Zonas'),
+                        ('manual_send.index', 'send', 'Enviar mensaje'),
+                        ('rules.index', 'workflow', 'Reglas 112CV'),
+                        ('rules.log', 'history', 'Histórico'),
+                        ('settings.index', 'settings', 'Configuración'),
+                    ] %}
+                    {% for endpoint, icon, label in nav_items %}
+                    {% set active = request.endpoint == endpoint %}
+                    <li>
+                        <a href="{{ url_for(endpoint) }}"
+                           class="rounded-lg {{ 'active bg-navy-850 text-white' if active else 'text-slate-400 hover:text-slate-100 hover:bg-navy-850/60' }}">
+                            <i data-lucide="{{ icon }}" class="w-4 h-4 {{ 'text-brand' if active else '' }}"></i>
+                            {{ label }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <form method="post" action="{{ url_for('auth.logout') }}" class="px-3 pb-5">
+                    <button class="btn btn-ghost btn-block justify-start gap-3 text-slate-400 hover:text-red-400">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Salir
+                    </button>
+                </form>
+            </aside>
+        </div>
+    </div>
+    {% else %}
     </main>
+    {% endif %}
 
     <div id="confirm-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 px-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 max-w-sm w-full">
+        <div class="modal-box bg-navy-900 border border-navy-800">
             <p id="confirm-modal-text" class="text-sm text-slate-200 mb-5"></p>
             <div class="flex justify-end gap-2">
-                <button type="button" id="confirm-modal-cancel"
-                        class="px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700">Cancelar</button>
-                <button type="button" id="confirm-modal-accept"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500">Confirmar</button>
+                <button type="button" id="confirm-modal-cancel" class="btn btn-sm btn-ghost">Cancelar</button>
+                <button type="button" id="confirm-modal-accept" class="btn btn-sm btn-primary">Confirmar</button>
             </div>
         </div>
     </div>
@@ -83,10 +170,8 @@
             if (!form || form.dataset.confirmed === "true") return;
             e.preventDefault();
             modalText.textContent = form.dataset.confirm;
-            acceptBtn.className = "px-3 py-1.5 rounded-lg text-sm font-medium " +
-                (form.dataset.confirmVariant === "danger"
-                    ? "bg-red-600 hover:bg-red-500"
-                    : "bg-emerald-600 hover:bg-emerald-500");
+            acceptBtn.className = "btn btn-sm " +
+                (form.dataset.confirmVariant === "danger" ? "btn-error" : "btn-primary");
             pendingForm = form;
             modal.classList.remove("hidden");
             modal.classList.add("flex");

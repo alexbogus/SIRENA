@@ -80,6 +80,22 @@ def set_volume(speaker_id: int):
     return jsonify({"ok": True, "volume_percent": volume_percent})
 
 
+@bp.route("/<int:speaker_id>/toggle", methods=["POST"])
+@login_required
+def toggle(speaker_id: int):
+    sp = speakers_model.get(speaker_id)
+    if not sp:
+        flash("El altavoz ya no existe.", "error")
+        return redirect(url_for("speakers.index"))
+    new_enabled = not bool(sp["enabled"])
+    speakers_model.set_enabled(speaker_id, new_enabled)
+    logger.info(f"Altavoz {speaker_id} ({sp['name']}) {'habilitado' if new_enabled else 'deshabilitado'}")
+    audit_model.record("speaker", "updated", sp["name"],
+                        "habilitado" if new_enabled else "deshabilitado")
+    flash(f"Altavoz {'habilitado' if new_enabled else 'deshabilitado'}.", "success")
+    return redirect(url_for("speakers.index"))
+
+
 @bp.route("/<int:speaker_id>/delete", methods=["POST"])
 @login_required
 def delete(speaker_id: int):

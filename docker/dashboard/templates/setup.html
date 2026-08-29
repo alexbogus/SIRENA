@@ -1,23 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Configuración inicial{% endblock %}
 {% block content %}
-<div class="max-w-sm mx-auto mt-16 bg-slate-900 border border-slate-800 rounded-xl p-6">
-    <h1 class="text-xl font-semibold mb-2 text-center">Configuración inicial</h1>
-    <p class="text-sm text-slate-400 mb-6 text-center">Establece la contraseña de acceso al centro de mando.</p>
-    <form method="post" class="space-y-4">
-        <div>
-            <label class="block text-sm text-slate-400 mb-1">Contraseña (mínimo 8 caracteres)</label>
-            <input type="password" name="password" required minlength="8"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+<div class="min-h-screen flex items-center justify-center px-4">
+    <div class="card w-full max-w-sm bg-navy-900 border border-navy-800 shadow-2xl">
+        <div class="card-body items-center text-center">
+            <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-navy-700 flex items-center justify-center overflow-hidden mb-2">
+                <img src="{{ url_for('static', filename='images/speaker-model.png') }}" class="w-[70px] h-[70px] object-contain" alt="Altavoz IP SIRENA">
+            </div>
+            <h1 class="card-title font-display text-2xl">SIRENA</h1>
+            <p class="text-sm text-slate-400 mb-2">Establece la contraseña de acceso al panel.</p>
+            <form method="post" class="w-full space-y-4 text-left">
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2">
+                        <span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Contraseña (mínimo 8 caracteres)</span>
+                    </label>
+                    <input type="password" name="password" required minlength="8"
+                           class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2">
+                        <span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Repite la contraseña</span>
+                    </label>
+                    <input type="password" name="confirm" required minlength="8"
+                           class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Establecer contraseña</button>
+            </form>
         </div>
-        <div>
-            <label class="block text-sm text-slate-400 mb-1">Repite la contraseña</label>
-            <input type="password" name="confirm" required minlength="8"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-medium">
-            Establecer contraseña
-        </button>
-    </form>
+    </div>
 </div>
 {% endblock %}

@@ -3,17 +3,17 @@
 {% block content %}
 <h1 class="text-xl font-semibold mb-4">Enviar mensaje manual</h1>
 
-<form method="post" action="{{ url_for('manual_send.send') }}" class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 max-w-2xl">
+<form method="post" action="{{ url_for('manual_send.send') }}" class="bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-4 max-w-2xl">
     <div>
         <label class="block text-sm text-slate-400 mb-1">Texto a leer</label>
         <textarea name="text" id="text-input" rows="4" required
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"
+                  class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2"
                   placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
     </div>
 
     <div class="flex items-center gap-3 flex-wrap">
         <button type="button" id="preview-btn"
-                class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                class="bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
             <i data-lucide="play-circle" class="w-4 h-4"></i>
             <span id="preview-btn-label">Escuchar preview</span>
         </button>
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 font-medium flex items-center gap-2">
+    <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 font-medium flex items-center gap-2">
         <i data-lucide="send" class="w-4 h-4"></i> Enviar
     </button>
 </form>

@@ -56,6 +56,11 @@ def update(speaker_id: int, name: str, ip: str, port: int, zone_ids: list[int]) 
         _set_zones(cur, speaker_id, zone_ids)
 
 
+def set_enabled(speaker_id: int, enabled: bool) -> None:
+    with db_cursor() as cur:
+        cur.execute("UPDATE speakers SET enabled = ? WHERE id = ?", (1 if enabled else 0, speaker_id))
+
+
 def delete(speaker_id: int) -> None:
     with db_cursor() as cur:
         cur.execute("DELETE FROM speakers WHERE id = ?", (speaker_id,))
@@ -75,7 +80,7 @@ def resolve_targets(zone_ids: list[int] | None, all_speakers: bool) -> list[dict
     if all_speakers or not zone_ids:
         if all_speakers:
             with db_cursor() as cur:
-                rows = cur.execute("SELECT * FROM speakers").fetchall()
+                rows = cur.execute("SELECT * FROM speakers WHERE enabled = 1").fetchall()
             return [dict(r) for r in rows]
         return []
     with db_cursor() as cur:
@@ -84,7 +89,7 @@ def resolve_targets(zone_ids: list[int] | None, all_speakers: bool) -> list[dict
             f"""
             SELECT DISTINCT s.* FROM speakers s
             JOIN speaker_zones sz ON sz.speaker_id = s.id
-            WHERE sz.zone_id IN ({placeholders})
+            WHERE s.enabled = 1 AND sz.zone_id IN ({placeholders})
             """,
             zone_ids,
         ).fetchall()
@@ -108,11 +113,12 @@ def upsert_status(speaker_id: int, status: dict, poll_ok: bool, poll_at: str) ->
             cur.execute(
                 """
                 INSERT INTO speaker_status(
-                    speaker_id, firmware_version, rssi_dbm, state, volume_percent,
+                    speaker_id, firmware_version, mac, rssi_dbm, state, volume_percent,
                     last_message_at, last_healthcheck_at, uptime_seconds, last_poll_ok, last_poll_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
                 ON CONFLICT(speaker_id) DO UPDATE SET
                     firmware_version = excluded.firmware_version,
+                    mac = excluded.mac,
                     rssi_dbm = excluded.rssi_dbm,
                     state = excluded.state,
                     volume_percent = excluded.volume_percent,
@@ -125,6 +131,7 @@ def upsert_status(speaker_id: int, status: dict, poll_ok: bool, poll_at: str) ->
                 (
                     speaker_id,
                     status.get("firmware_version"),
+                    status.get("mac"),
                     status.get("rssi_dbm"),
                     status.get("state"),
                     status.get("volume_percent"),

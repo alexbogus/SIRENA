@@ -5,6 +5,7 @@
 #include "esp_http_server.h"
 #include "esp_timer.h"
 #include "esp_log.h"
+#include "esp_wifi.h"
 
 #include "firmware_version.h"
 #include "wifi_manager.h"
@@ -19,6 +20,12 @@ static esp_err_t status_get_handler(httpd_req_t *req)
 {
     char ip_str[16];
     wifi_manager_get_ip_str(ip_str, sizeof(ip_str));
+
+    uint8_t mac[6] = {0};
+    esp_wifi_get_mac(WIFI_IF_STA, mac);
+    char mac_str[18];
+    snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     int8_t rssi_dbm = 0;
     wifi_manager_get_rssi(&rssi_dbm);
@@ -51,6 +58,7 @@ static esp_err_t status_get_handler(httpd_req_t *req)
         "{"
         "\"firmware_version\":\"%s\","
         "\"ip\":\"%s\","
+        "\"mac\":\"%s\","
         "\"rssi_dbm\":%d,"
         "\"state\":\"%s\","
         "\"volume_percent\":%d,"
@@ -60,6 +68,7 @@ static esp_err_t status_get_handler(httpd_req_t *req)
         "}",
         FIRMWARE_VERSION,
         ip_str,
+        mac_str,
         rssi_dbm,
         state,
         volume_percent,

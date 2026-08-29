@@ -1,3 +1,9 @@
+# macOS
+.DS_Store
+
+# Claude Code local project config
+.claude/
+
 # Visual Studio Code
 .vscode/*
 !.vscode/settings.json

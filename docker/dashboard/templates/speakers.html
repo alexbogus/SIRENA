@@ -2,68 +2,91 @@
 {% from "_multiselect.html" import multiselect %}
 {% block title %}Altavoces{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Altavoces</h1>
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-semibold">Altavoces</h1>
+        <p class="text-sm text-slate-400 mt-0.5">{{ speakers|length }} registrados</p>
+    </div>
+</div>
 {% set _zns = namespace(items=[]) %}
 {% for z in zones %}{% set _zns.items = _zns.items + [{"id": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
 
-<div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6">
-    <h2 class="font-medium mb-3 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir altavoz</h2>
-    <form method="post" action="{{ url_for('speakers.create') }}" class="grid sm:grid-cols-4 gap-3 items-end">
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-        </div>
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">IP</label>
-            <input name="ip" required placeholder="10.0.1.56" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-        </div>
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">Puerto</label>
-            <input name="port" type="number" value="5005" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-        </div>
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">Zonas</label>
-            {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
-        </div>
-        <div class="sm:col-span-4">
-            <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">Añadir</button>
-        </div>
-    </form>
-</div>
+<div class="grid lg:grid-cols-[380px_1fr] gap-5 items-start">
 
-<div class="space-y-3">
-    {% for sp in speakers %}
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <form method="post" action="{{ url_for('speakers.edit', speaker_id=sp.id) }}" class="grid sm:grid-cols-5 gap-3 items-end">
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-                <input name="name" value="{{ sp.name }}" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+    <div class="card bg-navy-900 border border-navy-800">
+        <div class="card-body">
+            <div class="flex justify-center mb-2">
+                <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-navy-700 flex items-center justify-center overflow-hidden">
+                    <img src="{{ url_for('static', filename='images/speaker-model.png') }}" class="w-16 h-16 object-contain" alt="Altavoz IP">
+                </div>
             </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">IP</label>
-                <input name="ip" value="{{ sp.ip }}" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Puerto</label>
-                <input name="port" type="number" value="{{ sp.port }}" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Zonas</label>
-                {{ multiselect("zone_ids", _zns.items, sp.zones|map(attribute='id')|list, "Sin zonas", value_attr="id", label_attr="label") }}
-            </div>
-            <div class="flex gap-2">
-                <button class="bg-slate-700 hover:bg-slate-600 rounded-lg px-3 py-2 text-sm">Guardar</button>
-            </div>
-        </form>
-        <form method="post" action="{{ url_for('speakers.delete', speaker_id=sp.id) }}" class="mt-2"
-              data-confirm="¿Eliminar el altavoz {{ sp.name }}?" data-confirm-variant="danger">
-            <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-            </button>
-        </form>
+            <h2 class="card-title text-base"><i data-lucide="plus-circle" class="w-4 h-4 text-brand"></i> Añadir altavoz</h2>
+            <form method="post" action="{{ url_for('speakers.create') }}" class="space-y-4">
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
+                    <input name="name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
+                        <input name="ip" required placeholder="10.0.1.56" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
+                        <input name="port" type="number" value="5005" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    </div>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Zonas</span></label>
+                    {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
+                </div>
+                <button class="btn btn-primary btn-block">Añadir altavoz</button>
+            </form>
+        </div>
     </div>
-    {% else %}
-    <p class="text-slate-500 text-sm">No hay altavoces dados de alta todavía.</p>
-    {% endfor %}
+
+    <div class="space-y-3">
+        {% for sp in speakers %}
+        <div class="card bg-navy-900 border border-navy-800">
+            <div class="card-body p-4">
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="w-9 h-9 rounded-lg bg-navy-800 flex items-center justify-center shrink-0">
+                        <i data-lucide="radio-tower" class="w-4 h-4 text-brand-soft"></i>
+                    </div>
+                    <span class="font-medium text-sm">{{ sp.name }}</span>
+                </div>
+                <form method="post" action="{{ url_for('speakers.edit', speaker_id=sp.id) }}" class="grid sm:grid-cols-5 gap-3 items-end">
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Nombre</span></label>
+                        <input name="name" value="{{ sp.name }}" required class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">IP</span></label>
+                        <input name="ip" value="{{ sp.ip }}" required class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Puerto</span></label>
+                        <input name="port" type="number" value="{{ sp.port }}" class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Zonas</span></label>
+                        {{ multiselect("zone_ids", _zns.items, sp.zones|map(attribute='id')|list, "Sin zonas", value_attr="id", label_attr="label") }}
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-sm bg-navy-800 hover:bg-navy-700 border-0">Guardar</button>
+                    </div>
+                </form>
+                <form method="post" action="{{ url_for('speakers.delete', speaker_id=sp.id) }}" class="mt-2"
+                      data-confirm="¿Eliminar el altavoz {{ sp.name }}?" data-confirm-variant="danger">
+                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">No hay altavoces dados de alta todavía.</p>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

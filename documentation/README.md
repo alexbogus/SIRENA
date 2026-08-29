@@ -1,6 +1,6 @@
 # Documentación — esp32s3-ip-speaker-net
 
-Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) usados como megafonía IP en BRAVO 2. Un servicio Docker (aún por construir) recibe JSON de alarmas, genera voz con Piper TTS y la envía en tiempo real por UDP al altavoz de la zona/población correspondiente.
+Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) usados como megafonía IP en BRAVO 2. El centro de mando **SIRENA** (`docker/dashboard/`, Flask + SQLite) recibe incidentes del feed 112CV, genera voz con Piper TTS y la envía en tiempo real por UDP al altavoz de la zona/población correspondiente; también permite el envío manual de mensajes y gestiona altavoces, zonas y reglas de alerta automática.
 
 ## Índice
 
@@ -23,7 +23,7 @@ Los 6 hitos de la primera versión del firmware están completos y validados en 
 | 4 | Integración de Opus (decodificación + PLC ante pérdida de paquetes) |
 | 5 | Portal de configuración WiFi/IP en modo AP + persistencia en NVS |
 
-Pendiente (fuera del alcance de este firmware): el servicio Docker que recibe las alarmas, genera la voz con Piper y las envía a los altavoces — ver `docker/reference_send_audio.py` como punto de partida del protocolo de envío.
+El Hito 7 añadió el centro de mando Docker (**SIRENA**, `docker/dashboard/`): un panel Flask con SQLite que gestiona altavoces y zonas, permite el envío manual de mensajes (TTS vía Piper), define reglas de alerta automática sobre el feed de incidentes 112CV, y mantiene histórico/auditoría por altavoz. Cada altavoz se identifica por nombre, IP, puerto, zonas asignadas y ahora también su MAC real (reportada por el propio firmware en `GET /status`, ver [api-http.md](api-http.md)); puede deshabilitarse individualmente sin borrarlo, lo que lo excluye de los envíos (manuales y automáticos) sin perder su configuración.
 
 ## Quick start
 

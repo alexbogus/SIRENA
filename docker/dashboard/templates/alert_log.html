@@ -4,8 +4,8 @@
 <h1 class="text-xl font-semibold mb-4">Histórico de alertas automáticas (112CV)</h1>
 
 <div class="overflow-x-auto">
-<table class="w-full text-sm bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-    <thead class="bg-slate-800 text-slate-400 text-left">
+<table class="w-full text-sm bg-navy-900 border border-navy-800 rounded-xl overflow-hidden">
+    <thead class="bg-navy-800 text-slate-400 text-left">
         <tr>
             <th class="px-3 py-2">Incidente</th>
             <th class="px-3 py-2">Visto</th>
@@ -17,12 +17,12 @@
     </thead>
     <tbody>
         {% for e in entries %}
-        <tr class="border-t border-slate-800">
+        <tr class="border-t border-navy-800">
             <td class="px-3 py-2 font-mono text-xs">{{ e.incident_id }}</td>
             <td class="px-3 py-2 text-xs text-slate-400">{{ e.first_seen_at }}</td>
             <td class="px-3 py-2 text-xs">{{ e.last_raw_description }}</td>
             <td class="px-3 py-2 text-xs">
-                {% if e.rule_name %}{{ e.rule_name }}{% else %}<span class="text-slate-600">sin match</span>{% endif %}
+                {% if e.rule_name %}{{ e.rule_name }}{% else %}<span class="text-navy-600">sin match</span>{% endif %}
             </td>
             <td class="px-3 py-2 text-xs max-w-xs truncate">{{ e.message_text or '—' }}</td>
             <td class="px-3 py-2 text-xs text-slate-400">{{ e.sent_at or '—' }}</td>

@@ -19,6 +19,7 @@ curl http://10.0.1.56/status
 {
   "firmware_version": "0.2.0",
   "ip": "10.0.1.56",
+  "mac": "A0:F2:62:E3:46:F8",
   "rssi_dbm": -32,
   "state": "idle",
   "volume_percent": 70,
@@ -32,6 +33,7 @@ curl http://10.0.1.56/status
 |---|---|
 | `firmware_version` | Versión compilada (`main/firmware_version.h`), a subir a mano en cada release relevante. |
 | `ip` | IP actual del altavoz. |
+| `mac` | MAC de la interfaz WiFi STA (`esp_wifi_get_mac`), formateada `AA:BB:CC:DD:EE:FF`. Usada por el dashboard para identificar el hardware físico más allá del nombre/IP asignados. |
 | `rssi_dbm` | Nivel de señal WiFi. |
 | `state` | `"idle"` o `"streaming"` — refleja el estado **real** de la máquina de estados del protocolo (`udp_audio_server_is_streaming()`), no una estimación por ocupación del buffer. |
 | `volume_percent` | Volumen actual (0-100), persistido en NVS. |

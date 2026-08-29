@@ -11,12 +11,14 @@ CREATE TABLE IF NOT EXISTS speakers (
     name       TEXT NOT NULL UNIQUE,
     ip         TEXT NOT NULL UNIQUE,
     port       INTEGER NOT NULL DEFAULT 5005,
+    enabled    INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS speaker_status (
     speaker_id          INTEGER PRIMARY KEY REFERENCES speakers(id) ON DELETE CASCADE,
     firmware_version     TEXT,
+    mac                    TEXT,
     rssi_dbm              INTEGER,
     state                  TEXT,
     volume_percent        INTEGER,

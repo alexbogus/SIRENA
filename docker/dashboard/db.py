@@ -12,6 +12,8 @@ _COLUMN_MIGRATIONS = [
     ("messages", "target_label", "TEXT"),
     ("zones", "enabled", "INTEGER NOT NULL DEFAULT 1"),
     ("alert_rules", "tone_id", "INTEGER REFERENCES tones(id)"),
+    ("speakers", "enabled", "INTEGER NOT NULL DEFAULT 1"),
+    ("speaker_status", "mac", "TEXT"),
 ]
 
 # Tonos sembrados la primera vez que arranca el contenedor (tabla `tones`

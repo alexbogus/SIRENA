@@ -2,7 +2,7 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
-<div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-navy-900 border border-navy-800 rounded-xl px-4 py-3">
     <div class="flex items-center gap-2">
         <span class="text-sm text-slate-400">Alertas automáticas:</span>
         <button id="auto-alerts-toggle"
@@ -17,14 +17,14 @@
 <div id="speaker-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
 <template id="speaker-card-template">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+    <div class="bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-2">
         <div class="flex items-center justify-between gap-2">
             <span class="font-semibold flex items-center gap-2 min-w-0">
                 <span class="dot w-2.5 h-2.5 rounded-full shrink-0"></span>
                 <span class="name truncate"></span>
             </span>
             <div class="flex items-center gap-2 shrink-0">
-                <span class="state text-xs px-2 py-0.5 rounded-full bg-slate-800"></span>
+                <span class="state text-xs px-2 py-0.5 rounded-full bg-navy-800"></span>
                 <img class="model-img w-10 h-10 object-contain" src="{{ url_for('static', filename='images/speaker-model.png') }}" alt="Waveshare ESP32-S3-AUDIO-Board">
             </div>
         </div>
@@ -39,12 +39,12 @@
         <div class="text-xs text-slate-400">Último msg altavoz: <span class="last-message-at text-slate-200"></span></div>
         <div class="text-xs text-slate-400">Último healthcheck: <span class="last-healthcheck-at text-slate-200"></span></div>
         <div class="text-xs text-slate-400">Uptime: <span class="uptime text-slate-200"></span></div>
-        <div class="border-t border-slate-800 pt-2 text-xs">
+        <div class="border-t border-navy-800 pt-2 text-xs">
             <div class="text-slate-400">Último mensaje enviado:</div>
             <div class="sent-text text-slate-200 truncate"></div>
             <div class="sent-status mt-1"></div>
         </div>
-        <div class="border-t border-slate-800 pt-2">
+        <div class="border-t border-navy-800 pt-2">
             <div class="text-xs text-slate-400 mb-1">Histórico de mensajes</div>
             <div class="overflow-x-auto">
                 <table class="history-table w-full text-xs">
@@ -107,14 +107,14 @@ function renderHistoryTable(tbody, history) {
     tbody.innerHTML = "";
     history.forEach(h => {
         const tr = document.createElement("tr");
-        tr.className = "border-t border-slate-800 text-slate-300";
+        tr.className = "border-t border-navy-800 text-slate-300";
         tr.innerHTML = `<td class="pr-2 py-1 whitespace-nowrap">${h.sent_at}</td>
                          <td class="pr-2 py-1">${h.target_label}</td>
                          <td class="py-1 truncate max-w-[200px]" title="${h.text.replace(/"/g, '&quot;')}">${h.text}</td>`;
         tbody.appendChild(tr);
     });
     if (history.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="py-2 text-slate-600">Sin mensajes todavía.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" class="py-2 text-navy-600">Sin mensajes todavía.</td></tr>`;
     }
 }
 
@@ -149,9 +149,9 @@ function renderSpeakers(speakers) {
         const dot = node.querySelector(".dot");
         const stateBadge = node.querySelector(".state");
         if (!sp.online) {
-            dot.className = "dot w-2.5 h-2.5 rounded-full bg-slate-600";
+            dot.className = "dot w-2.5 h-2.5 rounded-full bg-navy-600";
             stateBadge.textContent = "offline";
-            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-500";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-navy-800 text-slate-500";
         } else if (sp.state === "streaming") {
             dot.className = "dot w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
             stateBadge.textContent = "streaming";
@@ -159,7 +159,7 @@ function renderSpeakers(speakers) {
         } else {
             dot.className = "dot w-2.5 h-2.5 rounded-full bg-sky-400";
             stateBadge.textContent = "idle";
-            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-navy-800 text-slate-300";
         }
 
         if (sp.last_sent_message) {
