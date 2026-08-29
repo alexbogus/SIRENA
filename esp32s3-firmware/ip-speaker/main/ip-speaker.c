@@ -9,6 +9,7 @@
 #include "time_sync.h"
 #include "volume_storage.h"
 #include "http_status_server.h"
+#include "opus_decoder_wrapper.h"
 
 static const char *TAG = "ip-speaker";
 
@@ -26,6 +27,7 @@ void app_main(void)
     i2s_player_play_test_tone(440, 1000);
 
     ESP_ERROR_CHECK(ring_buffer_init(&s_ring_buffer, RING_BUFFER_CAPACITY_BYTES));
+    ESP_ERROR_CHECK(opus_decoder_wrapper_init());
     ESP_LOGI(TAG, "PSRAM libre tras reservar el ring buffer: %u bytes",
              (unsigned) heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 

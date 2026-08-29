@@ -8,6 +8,11 @@ Uso:
     python3 reference_send_audio.py --host 10.0.1.56 --wav audio.wav --simulate-loss 0.05
 
 El WAV debe ser 16kHz, mono, 16-bit (el mismo formato que produce Piper).
+Cada bloque de 20ms se codifica en Opus (requiere `pip install opuslib` y la
+librería nativa libopus instalada, p.ej. `brew install opus` / `apt install
+libopus0`) antes de enviarse -- el firmware, desde el Hito 4, espera frames
+Opus en los paquetes AUDIO, no PCM crudo.
+
 Aplica un colchón inicial de ~300ms antes de empezar el ritmo real-time,
 imprescindible para no sufrir microcortes por jitter de red (ver Hito 1
 del plan: un emisor sin colchón produce audio audiblemente cortado).
@@ -18,6 +23,11 @@ import socket
 import struct
 import time
 import wave
+
+try:
+    import opuslib
+except ImportError:
+    opuslib = None
 
 PROTOCOL_MAGIC = 0x53504B31  # "SPK1"
 PROTOCOL_VERSION = 1
@@ -53,17 +63,35 @@ def load_pcm_chunks(wav_path: str):
     return [pcm[i:i + CHUNK_BYTES] for i in range(0, len(pcm), CHUNK_BYTES)]
 
 
+def make_opus_encoder():
+    if opuslib is None:
+        raise RuntimeError(
+            "opuslib no está instalado. Ejecuta: pip install opuslib "
+            "(y asegúrate de tener libopus instalada en el sistema)."
+        )
+    enc = opuslib.Encoder(SAMPLE_RATE, 1, opuslib.APPLICATION_VOIP)
+    try:
+        enc.bitrate = 24000  # bitrate típico de voz, ver Hito 4 del plan
+    except Exception:
+        pass  # algunas builds de opuslib fallan al fijar bitrate; se usa el de por defecto
+    return enc
+
+
 def send_stream(sock: socket.socket, dest, chunks, simulate_loss: float):
+    encoder = make_opus_encoder()
     seq = 0
 
     sock.sendto(build_header(FRAME_START, seq, 0), dest)
     seq += 1
 
-    def send_audio_chunk(chunk: bytes, seq_num: int):
+    def send_audio_chunk(pcm_chunk: bytes, seq_num: int):
         if simulate_loss > 0 and random.random() < simulate_loss:
             print(f"  [simulado] paquete seq={seq_num} descartado (no se envía)")
             return
-        sock.sendto(build_header(FRAME_AUDIO, seq_num, len(chunk)) + chunk, dest)
+        if len(pcm_chunk) < CHUNK_BYTES:
+            pcm_chunk = pcm_chunk + b"\x00" * (CHUNK_BYTES - len(pcm_chunk))  # Opus exige el frame completo
+        encoded = encoder.encode(pcm_chunk, CHUNK_SAMPLES)
+        sock.sendto(build_header(FRAME_AUDIO, seq_num, len(encoded)) + encoded, dest)
 
     # Colchón inicial: los primeros LEAD_CHUNKS se envían sin esperar, para
     # que el ring buffer del ESP32 tenga margen antes de que empiece a
@@ -73,6 +101,11 @@ def send_stream(sock: socket.socket, dest, chunks, simulate_loss: float):
     for chunk in lead:
         send_audio_chunk(chunk, seq)
         seq += 1
+        # Un burst totalmente sin pausa (0ms) llegó a saturar el receive
+        # buffer del ESP32 en pruebas reales (10 de 17 paquetes iniciales
+        # perdidos). Un espaciado mínimo de 2ms sigue siendo ~10x más rápido
+        # que tiempo real pero no satura al receptor.
+        time.sleep(0.002)
 
     t0 = time.time()
     for i, chunk in enumerate(rest):

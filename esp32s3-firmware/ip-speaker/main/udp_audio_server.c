@@ -1,5 +1,6 @@
 #include "udp_audio_server.h"
 #include "protocol.h"
+#include "opus_decoder_wrapper.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -10,9 +11,22 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+// Frames Opus perdidos consecutivos a rellenar vía PLC ante un hueco de
+// secuencia. Un hueco mayor (p.ej. un START mal numerado) no dispara un
+// bucle desmedido de llamadas a PLC.
+#define MAX_PLC_FRAMES_PER_GAP (25) // 25 * 20ms = 500ms
+
+// Estadísticas de CPU del decodificador, logueadas cada ~5s.
+static int64_t s_decode_time_us_accum = 0;
+static uint32_t s_decode_count = 0;
+static int64_t s_last_decode_log_ms = 0;
+
 static const char *TAG = "udp_audio_server";
 
-#define RX_TASK_STACK (4096)
+// El decodificador Opus (celt/silk) usa varios KB de pila propios; 4096
+// bytes bastaban para el PCM crudo del Hito 1-3 pero desbordaban al añadir
+// Opus en el Hito 4 (comprobado en hardware: "stack overflow in task udp_rx").
+#define RX_TASK_STACK (10240)
 #define RX_TASK_PRIO  (10)
 #define RX_TASK_CORE  (0)
 #define RX_BUF_SIZE   (1472) // por debajo del MTU típico de WiFi (evita fragmentación IP)
@@ -99,13 +113,25 @@ static void handle_packet(int sock, ring_buffer_t *rb, const uint8_t *buf, int l
         ESP_LOGI(TAG, "Nuevo stream (seq=%u)", (unsigned) header.seq_num);
         break;
 
-    case FRAME_AUDIO:
+    case FRAME_AUDIO: {
+        int16_t pcm[OPUS_FRAME_SAMPLES];
+
         if (s_has_expected_seq && header.seq_num != s_expected_seq) {
             if (header.seq_num > s_expected_seq) {
                 uint32_t lost = header.seq_num - s_expected_seq;
                 s_lost_packets += lost;
-                ESP_LOGW(TAG, "%u paquete(s) perdido(s) (esperado seq=%u, recibido seq=%u)",
+                ESP_LOGW(TAG, "%u paquete(s) perdido(s) (esperado seq=%u, recibido seq=%u), aplicando PLC",
                          (unsigned) lost, (unsigned) s_expected_seq, (unsigned) header.seq_num);
+                uint32_t plc_frames = lost > MAX_PLC_FRAMES_PER_GAP ? MAX_PLC_FRAMES_PER_GAP : lost;
+                for (uint32_t i = 0; i < plc_frames; i++) {
+                    int64_t t0 = esp_timer_get_time();
+                    int samples = opus_decoder_wrapper_conceal(pcm);
+                    s_decode_time_us_accum += esp_timer_get_time() - t0;
+                    s_decode_count++;
+                    if (samples > 0) {
+                        ring_buffer_write(rb, (const uint8_t *) pcm, (size_t) samples * sizeof(int16_t));
+                    }
+                }
             } else {
                 ESP_LOGW(TAG, "Paquete fuera de orden/duplicado (esperado seq=%u, recibido seq=%u)",
                          (unsigned) s_expected_seq, (unsigned) header.seq_num);
@@ -113,11 +139,32 @@ static void handle_packet(int sock, ring_buffer_t *rb, const uint8_t *buf, int l
         }
         s_expected_seq = header.seq_num + 1;
         s_has_expected_seq = true;
+
         if (payload_len > 0) {
-            ring_buffer_write(rb, payload, (size_t) payload_len);
+            int64_t t0 = esp_timer_get_time();
+            int samples = opus_decoder_wrapper_decode(payload, payload_len, pcm);
+            s_decode_time_us_accum += esp_timer_get_time() - t0;
+            s_decode_count++;
+            if (samples > 0) {
+                ring_buffer_write(rb, (const uint8_t *) pcm, (size_t) samples * sizeof(int16_t));
+            } else {
+                ESP_LOGW(TAG, "Fallo al decodificar frame Opus (seq=%u): %d", (unsigned) header.seq_num, samples);
+            }
         }
         s_last_message_time_ms = esp_timer_get_time() / 1000;
+
+        int64_t now_ms = esp_timer_get_time() / 1000;
+        if (s_decode_count > 0 && now_ms - s_last_decode_log_ms > 5000) {
+            double avg_us = (double) s_decode_time_us_accum / s_decode_count;
+            double cpu_pct = (avg_us / 20000.0) * 100.0; // frame de 20ms
+            ESP_LOGI(TAG, "Opus decode: %.0fus/frame de media (%.1f%% de un frame de 20ms), %u frames",
+                     avg_us, cpu_pct, (unsigned) s_decode_count);
+            s_decode_time_us_accum = 0;
+            s_decode_count = 0;
+            s_last_decode_log_ms = now_ms;
+        }
         break;
+    }
 
     case FRAME_END:
         s_streaming = false;

@@ -8,4 +8,5 @@ idf_component_register(SRCS
                         "time_sync.c"
                         "volume_storage.c"
                         "http_status_server.c"
+                        "opus_decoder_wrapper.c"
                     INCLUDE_DIRS ".")

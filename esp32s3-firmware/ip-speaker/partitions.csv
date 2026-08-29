@@ -1,0 +1,7 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# Flash real: 16MB. La partición "single app" por defecto (1MB) se quedó casi
+# llena al añadir Opus (Hito 4); aquí le damos 4MB de margen para el resto
+# de hitos, dejando de sobra los ~12MB restantes sin usar por ahora.
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 4M,
