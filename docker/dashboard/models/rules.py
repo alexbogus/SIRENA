@@ -55,6 +55,14 @@ def update(rule_id: int, name: str, municipios: list[str], categorias: list[list
 
 def delete(rule_id: int) -> None:
     with db_cursor() as cur:
+        # messages.rule_id y processed_incidents.matched_rule_id son
+        # REFERENCES alert_rules(id) sin ON DELETE (SQLite no permite
+        # cambiar eso vía ALTER TABLE), así que borrar una regla ya usada
+        # violaba la FK -- se desvincula el historial en vez de bloquear el
+        # borrado, igual que target_label ya congela el destino de un
+        # mensaje aunque la zona deje de existir.
+        cur.execute("UPDATE messages SET rule_id = NULL WHERE rule_id = ?", (rule_id,))
+        cur.execute("UPDATE processed_incidents SET matched_rule_id = NULL WHERE matched_rule_id = ?", (rule_id,))
         cur.execute("DELETE FROM alert_rules WHERE id = ?", (rule_id,))
 
 
