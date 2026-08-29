@@ -11,4 +11,5 @@ idf_component_register(SRCS
                         "opus_decoder_wrapper.c"
                         "nvs_config.c"
                         "http_config_server.c"
+                        "led_ring.c"
                     INCLUDE_DIRS ".")

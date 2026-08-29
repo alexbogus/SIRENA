@@ -26,3 +26,7 @@
 
 // Botón BOOT nativo (no pasa por el TCA9555)
 #define BOARD_BOOT_BUTTON_GPIO (GPIO_NUM_0)
+
+// Anillo de 7 LEDs WS2812 (RGB direccionables)
+#define BOARD_LED_STRIP_GPIO      (GPIO_NUM_38)
+#define BOARD_LED_STRIP_LED_COUNT (7)

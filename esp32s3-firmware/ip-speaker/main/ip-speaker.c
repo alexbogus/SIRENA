@@ -11,6 +11,7 @@
 #include "http_status_server.h"
 #include "http_config_server.h"
 #include "opus_decoder_wrapper.h"
+#include "led_ring.h"
 
 static const char *TAG = "ip-speaker";
 
@@ -24,6 +25,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Arrancando ip-speaker");
 
     ESP_ERROR_CHECK(audio_codec_es8311_init());
+    ESP_ERROR_CHECK(led_ring_init());
     ESP_LOGI(TAG, "Reproduciendo tono de prueba (440Hz, 1s)...");
     i2s_player_play_test_tone(440, 1000);
 

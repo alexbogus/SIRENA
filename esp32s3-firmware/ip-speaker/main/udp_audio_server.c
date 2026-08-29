@@ -1,6 +1,7 @@
 #include "udp_audio_server.h"
 #include "protocol.h"
 #include "opus_decoder_wrapper.h"
+#include "led_ring.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -110,6 +111,7 @@ static void handle_packet(int sock, ring_buffer_t *rb, const uint8_t *buf, int l
         s_has_expected_seq = true;
         s_streaming = true;
         s_last_message_time_ms = esp_timer_get_time() / 1000;
+        led_ring_start();
         ESP_LOGI(TAG, "Nuevo stream (seq=%u)", (unsigned) header.seq_num);
         break;
 
@@ -168,6 +170,7 @@ static void handle_packet(int sock, ring_buffer_t *rb, const uint8_t *buf, int l
 
     case FRAME_END:
         s_streaming = false;
+        led_ring_stop();
         ESP_LOGI(TAG, "Fin de stream (seq=%u)", (unsigned) header.seq_num);
         break;
 
