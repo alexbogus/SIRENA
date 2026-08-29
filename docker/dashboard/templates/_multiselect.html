@@ -1,0 +1,32 @@
+{# Desplegable con casillas, reutilizable (sustituye a <select multiple>).
+   Uso: {{ multiselect("zone_ids", zones, selected_ids, "Sin zonas", value_attr="id", label_attr="name") }}
+   - name: name del <input type=checkbox> (llega al backend igual que un select multiple)
+   - items: lista de dicts/objetos con value_attr/label_attr
+   - selected_values: lista de valores ya seleccionados (se comparan como string)
+   - placeholder: texto cuando no hay nada seleccionado
+#}
+{% macro multiselect(name, items, selected_values, placeholder, value_attr="value", label_attr="label") %}
+{% set selected_str = selected_values|map('string')|list %}
+<div class="relative" data-dropdown-checklist>
+    <button type="button"
+            class="w-full flex items-center justify-between gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-left hover:border-slate-600">
+        <span data-dropdown-label data-placeholder="{{ placeholder }}" class="truncate">{{ placeholder }}</span>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
+    </button>
+    <div data-dropdown-panel
+         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-2 space-y-0.5">
+        {% for item in items %}
+        {% set value = item[value_attr] %}
+        {% set label = item[label_attr] %}
+        <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-700 text-sm cursor-pointer">
+            <input type="checkbox" name="{{ name }}" value="{{ value }}" data-label="{{ label }}"
+                   {{ 'checked' if value|string in selected_str else '' }}
+                   class="rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0">
+            <span>{{ label }}</span>
+        </label>
+        {% else %}
+        <p class="text-xs text-slate-500 px-2 py-1.5">Sin opciones disponibles.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}

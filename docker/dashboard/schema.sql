@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS speaker_status (
 CREATE TABLE IF NOT EXISTS zones (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL UNIQUE,
+    enabled    INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

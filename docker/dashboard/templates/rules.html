@@ -32,7 +32,8 @@
                 {% include "_rule_form.html" with context %}
             </div>
         </details>
-        <form method="post" action="{{ url_for('rules.delete', rule_id=r.id) }}" class="mt-2" onsubmit="return confirm('¿Eliminar esta regla?');">
+        <form method="post" action="{{ url_for('rules.delete', rule_id=r.id) }}" class="mt-2"
+              data-confirm="¿Eliminar la regla {{ r.name }}?" data-confirm-variant="danger">
             <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
             </button>

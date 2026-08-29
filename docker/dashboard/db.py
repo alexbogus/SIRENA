@@ -10,6 +10,7 @@ import config
 # columna (no hay sistema de migraciones formal en este proyecto).
 _COLUMN_MIGRATIONS = [
     ("messages", "target_label", "TEXT"),
+    ("zones", "enabled", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

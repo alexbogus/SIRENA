@@ -92,7 +92,7 @@ def recent(limit: int = 100) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def history_for_speaker(speaker_id: int, limit: int = 20) -> list[dict]:
+def history_for_speaker(speaker_id: int, limit: int = 5) -> list[dict]:
     """Histórico de mensajes enviados a un altavoz concreto, para la tabla
     ordenable bajo su card en el dashboard: fecha, zona (target_label
     fijado en el momento del envío) y texto."""

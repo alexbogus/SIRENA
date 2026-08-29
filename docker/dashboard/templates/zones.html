@@ -19,13 +19,34 @@
 
 <div class="space-y-2">
     {% for z in zones %}
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-        <span>{{ z.name }}</span>
-        <form method="post" action="{{ url_for('zones.delete', zone_id=z.id) }}" onsubmit="return confirm('¿Eliminar esta zona?');">
-            <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-            </button>
-        </form>
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <form method="post" action="{{ url_for('zones.edit', zone_id=z.id) }}" class="flex items-center gap-2 flex-1 min-w-[200px]">
+                <input name="name" value="{{ z.name }}" required
+                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <span class="text-xs px-2 py-0.5 rounded-full shrink-0 {{ 'bg-emerald-900/60 text-emerald-300' if z.enabled else 'bg-slate-800 text-slate-500' }}">
+                    {{ 'activa' if z.enabled else 'deshabilitada' }}
+                </span>
+                <button class="text-slate-300 hover:text-emerald-400 text-xs flex items-center gap-1 shrink-0">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
+                </button>
+            </form>
+            <div class="flex items-center gap-3 shrink-0">
+                <form method="post" action="{{ url_for('zones.toggle', zone_id=z.id) }}"
+                      data-confirm="¿{{ 'Deshabilitar' if z.enabled else 'Habilitar' }} la zona {{ z.name }}?">
+                    <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                        <i data-lucide="{{ 'pause-circle' if z.enabled else 'play-circle' }}" class="w-3.5 h-3.5"></i>
+                        {{ 'Deshabilitar' if z.enabled else 'Habilitar' }}
+                    </button>
+                </form>
+                <form method="post" action="{{ url_for('zones.delete', zone_id=z.id) }}"
+                      data-confirm="¿Eliminar la zona {{ z.name }}?" data-confirm-variant="danger">
+                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
     {% else %}
     <p class="text-slate-500 text-sm">No hay zonas creadas todavía.</p>

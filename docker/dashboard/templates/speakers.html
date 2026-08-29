@@ -1,7 +1,10 @@
 {% extends "base.html" %}
+{% from "_multiselect.html" import multiselect %}
 {% block title %}Altavoces{% endblock %}
 {% block content %}
 <h1 class="text-xl font-semibold mb-4">Altavoces</h1>
+{% set _zns = namespace(items=[]) %}
+{% for z in zones %}{% set _zns.items = _zns.items + [{"id": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
 
 <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6">
     <h2 class="font-medium mb-3 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir altavoz</h2>
@@ -20,9 +23,7 @@
         </div>
         <div>
             <label class="block text-xs text-slate-400 mb-1">Zonas</label>
-            <select name="zone_ids" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-10">
-                {% for z in zones %}<option value="{{ z.id }}">{{ z.name }}</option>{% endfor %}
-            </select>
+            {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
         </div>
         <div class="sm:col-span-4">
             <button class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">Añadir</button>
@@ -48,18 +49,14 @@
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">Zonas</label>
-                <select name="zone_ids" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-10">
-                    {% for z in zones %}
-                    <option value="{{ z.id }}" {{ 'selected' if z.id in sp.zones|map(attribute='id')|list else '' }}>{{ z.name }}</option>
-                    {% endfor %}
-                </select>
+                {{ multiselect("zone_ids", _zns.items, sp.zones|map(attribute='id')|list, "Sin zonas", value_attr="id", label_attr="label") }}
             </div>
             <div class="flex gap-2">
                 <button class="bg-slate-700 hover:bg-slate-600 rounded-lg px-3 py-2 text-sm">Guardar</button>
             </div>
         </form>
         <form method="post" action="{{ url_for('speakers.delete', speaker_id=sp.id) }}" class="mt-2"
-              onsubmit="return confirm('¿Eliminar este altavoz?');">
+              data-confirm="¿Eliminar el altavoz {{ sp.name }}?" data-confirm-variant="danger">
             <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
             </button>

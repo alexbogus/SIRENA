@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Centro de Mando{% endblock %} · Protección Civil</title>
+    <title>{% block title %}Dashboard{% endblock %} · CECOM - Megafonía IP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -13,7 +13,7 @@
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2 font-semibold text-lg">
                 <i data-lucide="radio-tower" class="w-5 h-5 text-emerald-400"></i>
-                Centro de Mando PC
+                CECOM - Megafonía IP
             </a>
             <nav class="flex items-center gap-4 text-sm">
                 <a href="{{ url_for('dashboard.index') }}" class="hover:text-emerald-400">Dashboard</a>
@@ -48,7 +48,107 @@
         {% block content %}{% endblock %}
     </main>
 
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 px-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 max-w-sm w-full">
+            <p id="confirm-modal-text" class="text-sm text-slate-200 mb-5"></p>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="confirm-modal-cancel"
+                        class="px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700">Cancelar</button>
+                <button type="button" id="confirm-modal-accept"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script>lucide.createIcons();</script>
+    <script>
+    (function () {
+        // Modal de confirmación genérico: cualquier <form data-confirm="texto">
+        // pasa por aquí en lugar del confirm() nativo del navegador. Añadir
+        // data-confirm-variant="danger" para el botón en rojo (borrados).
+        const modal = document.getElementById("confirm-modal");
+        const modalText = document.getElementById("confirm-modal-text");
+        const acceptBtn = document.getElementById("confirm-modal-accept");
+        const cancelBtn = document.getElementById("confirm-modal-cancel");
+        let pendingForm = null;
+
+        function closeModal() {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            pendingForm = null;
+        }
+
+        document.addEventListener("submit", (e) => {
+            const form = e.target.closest("form[data-confirm]");
+            if (!form || form.dataset.confirmed === "true") return;
+            e.preventDefault();
+            modalText.textContent = form.dataset.confirm;
+            acceptBtn.className = "px-3 py-1.5 rounded-lg text-sm font-medium " +
+                (form.dataset.confirmVariant === "danger"
+                    ? "bg-red-600 hover:bg-red-500"
+                    : "bg-emerald-600 hover:bg-emerald-500");
+            pendingForm = form;
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        });
+
+        cancelBtn.addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+        });
+        acceptBtn.addEventListener("click", () => {
+            if (pendingForm) {
+                pendingForm.dataset.confirmed = "true";
+                pendingForm.submit();
+            }
+            closeModal();
+        });
+    })();
+
+    (function () {
+        // Desplegable con casillas: sustituye a <select multiple> (cuya
+        // representación nativa es inconsistente entre navegadores y fea con
+        // pocas opciones visibles). Cada <div data-dropdown-checklist> lleva
+        // un botón [data-dropdown-toggle-btn], un panel [data-dropdown-panel]
+        // con <input type="checkbox"> normales (mismo name/value que un
+        // select multiple, así que el backend no cambia) y una etiqueta
+        // [data-dropdown-label] que se actualiza con la selección actual.
+        function initDropdown(root) {
+            const btn = root.querySelector("[data-dropdown-toggle-btn]");
+            const panel = root.querySelector("[data-dropdown-panel]");
+            const label = root.querySelector("[data-dropdown-label]");
+            const placeholder = label.dataset.placeholder || label.textContent;
+            const checkboxes = () => Array.from(panel.querySelectorAll("input[type=checkbox]"));
+
+            function updateLabel() {
+                const checked = checkboxes().filter(c => c.checked);
+                if (checked.length === 0) {
+                    label.textContent = placeholder;
+                } else if (checked.length <= 2) {
+                    label.textContent = checked.map(c => c.dataset.label || c.value).join(", ");
+                } else {
+                    label.textContent = `${checked.length} seleccionados`;
+                }
+            }
+
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const isOpen = !panel.classList.contains("hidden");
+                document.querySelectorAll("[data-dropdown-panel]").forEach(p => p.classList.add("hidden"));
+                panel.classList.toggle("hidden", isOpen);
+            });
+            panel.addEventListener("click", (e) => e.stopPropagation());
+            checkboxes().forEach(c => c.addEventListener("change", updateLabel));
+            updateLabel();
+        }
+
+        document.querySelectorAll("[data-dropdown-checklist]").forEach(initDropdown);
+        document.addEventListener("click", () => {
+            document.querySelectorAll("[data-dropdown-panel]").forEach(p => p.classList.add("hidden"));
+        });
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

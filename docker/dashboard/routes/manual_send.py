@@ -12,6 +12,7 @@ from routes.auth import login_required
 from scheduler import scheduler
 from services.delivery_confirmation import schedule_confirmations
 from services.sender import send_to_many
+from services.tts import build_alert_wav
 
 bp = Blueprint("manual_send", __name__, url_prefix="/send")
 logger = config.get_logger("manual_send")
@@ -46,7 +47,7 @@ def send():
         target_label = ", ".join(zone_names) if zone_names else "—"
 
     try:
-        wav_path = _synthesize_plain(text)
+        wav_path = build_alert_wav(text)
     except Exception:
         logger.exception("Fallo de síntesis TTS en envío manual")
         flash("Fallo al generar el audio (Piper no responde). Inténtalo de nuevo.", "error")
@@ -71,10 +72,3 @@ def send():
     logger.info(f"Envío manual a {len(targets)} altavoz(ces), {ok_count} OK, texto={text!r}")
     flash(f"Enviado a {ok_count}/{len(targets)} altavoces, verificando entrega...", "success")
     return redirect(url_for("dashboard.index"))
-
-
-def _synthesize_plain(text: str) -> str:
-    """Envío manual: solo el texto sintetizado, sin el preámbulo ding-ding
-    (ese preámbulo es específico de las alertas automáticas del 112CV)."""
-    from services.tts import synthesize
-    return synthesize(text)

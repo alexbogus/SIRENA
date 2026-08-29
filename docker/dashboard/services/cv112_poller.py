@@ -85,10 +85,17 @@ def _process_feature(feature: dict, now_iso: str, correlation_id: str, scheduler
     raw_description = (props.get("description") or {}).get("es", "")
     municipio = props.get("municipio") or ""
 
+    # Se comprueba SIEMPRE, incluso si el incidente ya estaba visto sin
+    # cambios: is_known_* es un SELECT barato, y si no se hiciera aquí un
+    # incidente ya abierto antes de que existiera este catálogo (o cuya
+    # categoría no vuelve a cambiar) jamás rellenaría el desplegable de
+    # /rules, porque el guard de abajo corta la evaluación antes de llegar
+    # a intentarlo.
+    _check_taxonomy_novelty(raw_description, municipio, correlation_id)
+
     if record is not None and record["last_raw_description"] == raw_description:
         return  # ya evaluado con esta misma categoría, no hace falta repetir
 
-    _check_taxonomy_novelty(raw_description, municipio, correlation_id)
     incidents_model.upsert_seen(incident_id, raw_description, municipio, now_iso)
 
     if not settings_model.auto_alerts_enabled():

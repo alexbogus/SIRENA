@@ -1,3 +1,4 @@
+{% from "_multiselect.html" import multiselect %}
 {% set editing = r is defined and r %}
 <form method="post" action="{{ url_for('rules.edit', rule_id=r.id) if editing else url_for('rules.create') }}" class="space-y-3">
     <div>
@@ -7,27 +8,23 @@
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Municipios (vacío = todos)</label>
-        <select name="municipios" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-24">
-            {% for m in municipios %}
-            <option value="{{ m }}" {{ 'selected' if editing and m in r.municipios else '' }}>{{ m }}</option>
-            {% endfor %}
-        </select>
+        {% set _ns = namespace(items=[]) %}
+        {% for m in municipios %}{% set _ns.items = _ns.items + [{"value": m, "label": m}] %}{% endfor %}
+        {{ multiselect("municipios", _ns.items, r.municipios if editing else [], "Todos los municipios") }}
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Categorías (vacío = todas)</label>
-        <select name="categorias" multiple class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 h-24">
-            {% for path in category_paths %}
-            {% set joined = path|join('>') %}
-            <option value="{{ joined }}" {{ 'selected' if editing and path in r.categorias else '' }}>{{ path|join(' > ') }}</option>
-            {% endfor %}
-        </select>
+        {% set _ns2 = namespace(items=[]) %}
+        {% for path in category_paths %}{% set _ns2.items = _ns2.items + [{"value": path|join('>'), "label": path|join(' > ')}] %}{% endfor %}
+        {% set selected_categorias = (r.categorias|map('join', '>')|list) if editing else [] %}
+        {{ multiselect("categorias", _ns2.items, selected_categorias, "Todas las categorías") }}
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Destino</label>
         <select name="target_zone_id" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
             <option value="">Todos los altavoces</option>
             {% for z in zones %}
-            <option value="{{ z.id }}" {{ 'selected' if editing and r.target_zone_id == z.id else '' }}>{{ z.name }}</option>
+            <option value="{{ z.id }}" {{ 'selected' if editing and r.target_zone_id == z.id else '' }}>{{ z.name }}{{ ' (deshabilitada)' if not z.enabled else '' }}</option>
             {% endfor %}
         </select>
     </div>
