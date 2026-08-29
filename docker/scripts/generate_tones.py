@@ -100,10 +100,40 @@ def generate_suave(path: Path) -> None:
     _write_wav(path, buffer)
 
 
+def generate_selectiva(path: Path) -> None:
+    """3 pulsos de tono puro a 1200Hz con cola de decaimiento tipo campana.
+    Frecuencia y cadencia medidas por análisis espectral (FFT en ventanas de
+    40ms) de una grabación real de la señal "selectiva" de protección civil
+    aportada por el usuario -- pico estable en 1200Hz en los 3 pulsos,
+    onsets a 0s/1.6s/2.83s (cadencia irregular en la grabación original).
+    Reproducido aquí como tono sintético propio, no el audio original."""
+    freq = 1200
+    onsets_s = [0.0, 1.6, 2.83]
+    sustain_s, decay_s = 0.15, 0.7
+    pulse_dur_s = sustain_s + decay_s
+    pulse_samples = int(SAMPLE_RATE * pulse_dur_s)
+    envelope = _envelope(pulse_samples, attack_ms=5, full_s=sustain_s, fade_s=decay_s)
+
+    total_duration_s = onsets_s[-1] + pulse_dur_s
+    total_samples = int(SAMPLE_RATE * total_duration_s)
+    buffer = [0.0] * total_samples
+
+    for onset_s in onsets_s:
+        onset = int(SAMPLE_RATE * onset_s)
+        for j in range(pulse_samples):
+            idx = onset + j
+            if idx >= total_samples:
+                break
+            buffer[idx] += envelope[j] * AMPLITUDE * math.sin(2 * math.pi * freq * j / SAMPLE_RATE)
+
+    _write_wav(path, buffer)
+
+
 def main():
     generate_clasico(OUT_DIR / "clasico.wav")
     generate_urgente(OUT_DIR / "urgente.wav")
     generate_suave(OUT_DIR / "suave.wav")
+    generate_selectiva(OUT_DIR / "selectiva.wav")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,15 @@ _DEFAULT_TONES = [
     ("Clásico", "clasico.wav"),
     ("Urgente", "urgente.wav"),
     ("Suave", "suave.wav"),
+    ("Selectiva", "selectiva.wav"),
+]
+
+# Tonos añadidos después del primer arranque de instalaciones ya existentes
+# (donde _seed_default_tones ya no actúa porque la tabla no está vacía).
+# Se insertan por nombre de archivo si no existen todavía -- igual de
+# idempotente que _COLUMN_MIGRATIONS, sin sistema de migraciones formal.
+_ADDITIONAL_TONES = [
+    ("Selectiva", "selectiva.wav"),
 ]
 
 
@@ -31,6 +40,7 @@ def init_db() -> None:
         conn.executescript(schema_sql)
         _apply_column_migrations(conn)
         _seed_default_tones(conn)
+        _seed_additional_tones(conn)
         conn.commit()
 
 
@@ -50,6 +60,16 @@ def _seed_default_tones(conn: sqlite3.Connection) -> None:
             "INSERT INTO tones(name, filename, enabled, is_default) VALUES (?, ?, 1, ?)",
             (name, filename, 1 if i == 0 else 0),
         )
+
+
+def _seed_additional_tones(conn: sqlite3.Connection) -> None:
+    existing = {row["filename"] for row in conn.execute("SELECT filename FROM tones")}
+    for name, filename in _ADDITIONAL_TONES:
+        if filename not in existing:
+            conn.execute(
+                "INSERT INTO tones(name, filename, enabled, is_default) VALUES (?, ?, 1, 0)",
+                (name, filename),
+            )
 
 
 def get_connection() -> sqlite3.Connection:
