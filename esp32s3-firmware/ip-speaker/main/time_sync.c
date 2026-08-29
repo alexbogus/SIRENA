@@ -39,6 +39,13 @@ bool time_sync_is_synced(void)
     return s_synced;
 }
 
+static void format_time_t(time_t t, char *buf, size_t buf_len)
+{
+    struct tm timeinfo;
+    localtime_r(&t, &timeinfo);
+    strftime(buf, buf_len, "%d/%m/%Y - %H:%M:%S", &timeinfo);
+}
+
 void time_sync_format_now(char *buf, size_t buf_len)
 {
     if (!s_synced) {
@@ -46,8 +53,21 @@ void time_sync_format_now(char *buf, size_t buf_len)
         return;
     }
     time_t now;
-    struct tm timeinfo;
     time(&now);
-    localtime_r(&now, &timeinfo);
-    strftime(buf, buf_len, "%d/%m/%Y - %H:%M:%S", &timeinfo);
+    format_time_t(now, buf, buf_len);
+}
+
+void time_sync_format_ago_ms(int64_t ago_ms, char *buf, size_t buf_len)
+{
+    if (!s_synced) {
+        snprintf(buf, buf_len, "null");
+        return;
+    }
+    time_t now;
+    time(&now);
+    // ago_ms es un delta de reloj monótono (esp_timer_get_time()), con
+    // resolución de segundo basta para el uso (mostrar "hace cuánto" en el
+    // JSON de /status) sin complicar el formateo con sub-segundos.
+    time_t event_time = now - (time_t) (ago_ms / 1000);
+    format_time_t(event_time, buf, buf_len);
 }

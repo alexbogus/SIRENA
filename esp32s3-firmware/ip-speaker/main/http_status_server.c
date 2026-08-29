@@ -33,11 +33,12 @@ static esp_err_t status_get_handler(httpd_req_t *req)
     if (last_msg_ms == 0 || !time_sync_is_synced()) {
         snprintf(last_message_at, sizeof(last_message_at), "null");
     } else {
-        // Aproximación: usamos la hora actual formateada ya que solo
-        // guardamos el timestamp del último mensaje en milisegundos de
-        // uptime, no en tiempo de pared. Suficiente para el Hito 2; con el
-        // protocolo del Hito 3 esto se puede afinar si hace falta.
-        time_sync_format_now(last_message_at, sizeof(last_message_at));
+        // last_msg_ms es un timestamp de uptime (esp_timer_get_time()/1000),
+        // no de hora de pared; se convierte restando el delta transcurrido
+        // desde entonces a la hora de pared actual.
+        int64_t now_uptime_ms = esp_timer_get_time() / 1000;
+        int64_t ago_ms = now_uptime_ms - last_msg_ms;
+        time_sync_format_ago_ms(ago_ms, last_message_at, sizeof(last_message_at));
     }
 
     char last_healthcheck_at[24];
