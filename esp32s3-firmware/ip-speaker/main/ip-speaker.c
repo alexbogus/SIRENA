@@ -9,6 +9,7 @@
 #include "time_sync.h"
 #include "volume_storage.h"
 #include "http_status_server.h"
+#include "http_config_server.h"
 #include "opus_decoder_wrapper.h"
 
 static const char *TAG = "ip-speaker";
@@ -20,7 +21,7 @@ static ring_buffer_t s_ring_buffer;
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Arrancando ip-speaker (Hito 1: WiFi + UDP + PCM crudo)");
+    ESP_LOGI(TAG, "Arrancando ip-speaker");
 
     ESP_ERROR_CHECK(audio_codec_es8311_init());
     ESP_LOGI(TAG, "Reproduciendo tono de prueba (440Hz, 1s)...");
@@ -31,18 +32,24 @@ void app_main(void)
     ESP_LOGI(TAG, "PSRAM libre tras reservar el ring buffer: %u bytes",
              (unsigned) heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 
-    esp_err_t wifi_err = wifi_manager_start_and_wait(15000);
-    if (wifi_err != ESP_OK) {
-        ESP_LOGE(TAG, "No se pudo conectar a WiFi, reintentando en segundo plano...");
-    }
+    wifi_manager_result_t wifi_result = wifi_manager_start(15000);
 
     char ip_str[16];
     wifi_manager_get_ip_str(ip_str, sizeof(ip_str));
-    ESP_LOGI(TAG, "IP del altavoz: %s", ip_str);
 
-    if (wifi_err == ESP_OK) {
-        time_sync_start_and_wait(10000);
+    if (wifi_result == WIFI_MANAGER_AP_CONFIG) {
+        // Modo portal de configuración: es una red WiFi propia y aislada
+        // (no la LAN donde vive el Docker), así que no tiene sentido
+        // arrancar aquí el resto del pipeline (UDP de audio, status server)
+        // -- solo el formulario de configuración. El dispositivo se
+        // reinicia solo tras guardar la config (ver http_config_server.c).
+        ESP_LOGW(TAG, "Sin conexión WiFi válida: modo portal de configuración en http://%s/", ip_str);
+        ESP_ERROR_CHECK(http_config_server_start());
+        return;
     }
+
+    ESP_LOGI(TAG, "IP del altavoz: %s", ip_str);
+    time_sync_start_and_wait(10000);
 
     // El volumen del test tone (Hito 1) usó un valor fijo antes de que NVS
     // estuviera disponible; aquí lo sobreescribimos con el último valor
@@ -55,6 +62,6 @@ void app_main(void)
     ESP_ERROR_CHECK(udp_audio_server_start(&s_ring_buffer));
     ESP_ERROR_CHECK(http_status_server_start());
 
-    ESP_LOGI(TAG, "Listo. Envía PCM 16kHz/mono/16-bit por UDP al puerto %d, status en http://%s/status",
+    ESP_LOGI(TAG, "Listo. Envía PCM/Opus por UDP al puerto %d, status en http://%s/status",
              UDP_AUDIO_SERVER_PORT, ip_str);
 }

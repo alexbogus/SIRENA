@@ -9,4 +9,6 @@ idf_component_register(SRCS
                         "volume_storage.c"
                         "http_status_server.c"
                         "opus_decoder_wrapper.c"
+                        "nvs_config.c"
+                        "http_config_server.c"
                     INCLUDE_DIRS ".")
