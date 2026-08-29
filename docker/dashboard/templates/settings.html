@@ -74,7 +74,9 @@
             <div class="flex items-center gap-3 shrink-0">
                 <button type="button" class="tone-play text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
                         data-src="{{ url_for('static', filename='audio/tones/' + t.filename) }}">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i> Escuchar
+                    <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
+                    <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
+                    Escuchar
                 </button>
                 {% if not t.is_default %}
                 <form method="post" action="{{ url_for('settings.tones_default', tone_id=t.id) }}">
@@ -125,32 +127,37 @@
 {% block scripts %}
 <script>
 (function () {
+    // lucide.createIcons() sustituye cada <i data-lucide> por un <svg>, así
+    // que no se puede volver a tocar por su tag "i" en clics posteriores
+    // (querySelector("i") ya no encuentra nada -> TypeError silencioso que
+    // rompe el resto del handler). En vez de reescribir el icono en cada
+    // clic, se pre-renderizan los dos estados una sola vez y solo se
+    // alterna su visibilidad con la clase "hidden".
     const player = document.getElementById("tone-player");
     let activeBtn = null;
 
-    function resetBtn(btn) {
-        btn.querySelector("i").setAttribute("data-lucide", "play");
-        lucide.createIcons();
+    function setPlaying(btn, playing) {
+        btn.querySelector(".icon-play").classList.toggle("hidden", playing);
+        btn.querySelector(".icon-pause").classList.toggle("hidden", !playing);
     }
 
     document.querySelectorAll(".tone-play").forEach(btn => {
         btn.addEventListener("click", () => {
             const wasActive = activeBtn === btn && !player.paused;
-            if (activeBtn) resetBtn(activeBtn);
+            if (activeBtn) setPlaying(activeBtn, false);
             player.pause();
             activeBtn = null;
             if (wasActive) return;
 
             player.src = btn.dataset.src;
-            player.play();
+            player.play().catch(() => {}); // AbortError esperable si se interrumpe por un pause() posterior
             activeBtn = btn;
-            btn.querySelector("i").setAttribute("data-lucide", "pause");
-            lucide.createIcons();
+            setPlaying(btn, true);
         });
     });
 
     player.addEventListener("ended", () => {
-        if (activeBtn) resetBtn(activeBtn);
+        if (activeBtn) setPlaying(activeBtn, false);
         activeBtn = null;
     });
 })();

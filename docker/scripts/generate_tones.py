@@ -101,30 +101,50 @@ def generate_suave(path: Path) -> None:
 
 
 def generate_selectiva(path: Path) -> None:
-    """3 pulsos de tono puro a 1200Hz con cola de decaimiento tipo campana.
-    Frecuencia y cadencia medidas por análisis espectral (FFT en ventanas de
-    40ms) de una grabación real de la señal "selectiva" de protección civil
-    aportada por el usuario -- pico estable en 1200Hz en los 3 pulsos,
-    onsets a 0s/1.6s/2.83s (cadencia irregular en la grabación original).
-    Reproducido aquí como tono sintético propio, no el audio original."""
-    freq = 1200
-    onsets_s = [0.0, 1.6, 2.83]
-    sustain_s, decay_s = 0.15, 0.7
-    pulse_dur_s = sustain_s + decay_s
-    pulse_samples = int(SAMPLE_RATE * pulse_dur_s)
-    envelope = _envelope(pulse_samples, attack_ms=5, full_s=sustain_s, fade_s=decay_s)
+    """Sirena tipo "wail": barrido continuo (sin silencios) entre ~1250Hz y
+    ~2000Hz, periodo ~2.1s (grave sostenido ~1s, subida ~0.4s, agudo breve
+    ~0.1s, bajada ~0.4s, resto del ciclo en grave). Frecuencias y cadencia
+    medidas con un espectrograma (ffmpeg showspectrumpic) de una grabación
+    real de la señal "selectiva" de protección civil aportada por el
+    usuario -- una primera versión con pulsos aislados de tono fijo no se
+    parecía nada al original porque el patrón real es un barrido continuo,
+    no golpes sueltos. La fase se acumula muestra a muestra (en vez de
+    sin(2*pi*f*t)) para que el barrido no tenga discontinuidades de fase."""
+    f_lo, f_hi = 1250.0, 2000.0
+    period_s = 2.1
+    cycles = 2
+    hold_lo_s, rise_s, hold_hi_s, fall_s = 1.0, 0.4, 0.1, 0.4
+    rise_start_s = hold_lo_s
+    rise_end_s = rise_start_s + rise_s
+    hi_end_s = rise_end_s + hold_hi_s
+    fall_end_s = hi_end_s + fall_s
 
-    total_duration_s = onsets_s[-1] + pulse_dur_s
-    total_samples = int(SAMPLE_RATE * total_duration_s)
-    buffer = [0.0] * total_samples
+    total_duration_s = period_s * cycles
+    n_samples = int(SAMPLE_RATE * total_duration_s)
+    fade_samples = int(SAMPLE_RATE * 0.015)  # 15ms, evita click en los bordes del archivo
 
-    for onset_s in onsets_s:
-        onset = int(SAMPLE_RATE * onset_s)
-        for j in range(pulse_samples):
-            idx = onset + j
-            if idx >= total_samples:
-                break
-            buffer[idx] += envelope[j] * AMPLITUDE * math.sin(2 * math.pi * freq * j / SAMPLE_RATE)
+    buffer = []
+    phase = 0.0
+    for i in range(n_samples):
+        cycle_t = (i / SAMPLE_RATE) % period_s
+        if cycle_t < rise_start_s:
+            freq = f_lo
+        elif cycle_t < rise_end_s:
+            freq = f_lo + (f_hi - f_lo) * (cycle_t - rise_start_s) / rise_s
+        elif cycle_t < hi_end_s:
+            freq = f_hi
+        elif cycle_t < fall_end_s:
+            freq = f_hi - (f_hi - f_lo) * (cycle_t - hi_end_s) / fall_s
+        else:
+            freq = f_lo
+
+        phase += 2 * math.pi * freq / SAMPLE_RATE
+        sample = AMPLITUDE * math.sin(phase)
+        if i < fade_samples:
+            sample *= i / fade_samples
+        elif i >= n_samples - fade_samples:
+            sample *= (n_samples - i) / fade_samples
+        buffer.append(sample)
 
     _write_wav(path, buffer)
 
