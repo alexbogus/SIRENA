@@ -24,7 +24,7 @@ services:
     ports:
       - "127.0.0.1:5100:5100"
     volumes:
-      - ./piper/voices:/voices:ro
+      - ./piper/voices:/voices
     environment:
       - PIPER_VOICE_MODEL=/voices/es_ES-davefx-medium.onnx
     restart: unless-stopped
