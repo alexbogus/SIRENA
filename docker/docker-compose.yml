@@ -17,7 +17,12 @@ services:
   piper:
     build:
       context: ./piper
-    network_mode: host
+    # Sin network_mode: host y publicado solo en loopback: piper no debe
+    # ser alcanzable desde la LAN/exterior ni desde otros contenedores del
+    # host, solo desde dashboard (que sí usa host network y comparte el
+    # loopback del host).
+    ports:
+      - "127.0.0.1:5100:5100"
     volumes:
       - ./piper/voices:/voices:ro
     environment:
