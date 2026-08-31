@@ -54,6 +54,11 @@ def update(rule_id: int, name: str, municipios: list[str], categorias: list[list
         )
 
 
+def set_enabled(rule_id: int, enabled: bool) -> None:
+    with db_cursor() as cur:
+        cur.execute("UPDATE alert_rules SET enabled = ? WHERE id = ?", (1 if enabled else 0, rule_id))
+
+
 def delete(rule_id: int) -> None:
     with db_cursor() as cur:
         # messages.rule_id y processed_incidents.matched_rule_id son

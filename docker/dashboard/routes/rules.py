@@ -109,6 +109,20 @@ def add_municipio():
     return redirect(url_for("rules.index"))
 
 
+@bp.route("/<int:rule_id>/toggle", methods=["POST"])
+@login_required
+def toggle(rule_id: int):
+    rule = rules_model.get(rule_id)
+    if not rule:
+        flash("La regla ya no existe.", "error")
+        return redirect(url_for("rules.index"))
+    new_enabled = not bool(rule["enabled"])
+    rules_model.set_enabled(rule_id, new_enabled)
+    logger.info(f"Regla de alerta {rule_id} ({rule['name']}) {'habilitada' if new_enabled else 'deshabilitada'}")
+    flash(f"Regla {'habilitada' if new_enabled else 'deshabilitada'}.", "success")
+    return redirect(url_for("rules.index"))
+
+
 @bp.route("/<int:rule_id>/delete", methods=["POST"])
 @login_required
 def delete(rule_id: int):
