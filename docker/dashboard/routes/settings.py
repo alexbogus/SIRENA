@@ -2,14 +2,17 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
 import config
 import models.message_templates as message_templates_model
 import models.settings as settings_model
 import models.tones as tones_model
+import models.voices as voices_model
 import services.audio_convert as audio_convert
+import services.voice_downloader as voice_downloader
+import services.voices_catalog as voices_catalog
 from routes.auth import login_required
 from scheduler import scheduler
 
@@ -43,24 +46,31 @@ def index():
         tts_length_scale=settings_model.tts_length_scale(),
         tts_expressiveness=settings_model.tts_noise_scale(),
         tts_sentence_silence=settings_model.tts_sentence_silence(),
-        tts_voices=settings_model.TTS_VOICES,
+        tts_voices=settings_model.tts_voices_choices(),
         min_length_scale=settings_model.MIN_TTS_LENGTH_SCALE,
         max_length_scale=settings_model.MAX_TTS_LENGTH_SCALE,
         min_expressiveness=settings_model.MIN_TTS_NOISE,
         max_expressiveness=settings_model.MAX_TTS_NOISE,
         min_sentence_silence=settings_model.MIN_TTS_SENTENCE_SILENCE,
         max_sentence_silence=settings_model.MAX_TTS_SENTENCE_SILENCE,
+        voices_catalog=voices_catalog.load_catalog(),
+        installed_voice_keys=voices_catalog.installed_keys(),
+        voice_downloads_running=voices_model.list_running_downloads(),
     )
 
 
 def _parse_voice_choice(raw: str) -> tuple[str, int | None]:
     """"filename|speaker_id" (speaker_id vacío = modelo de un solo locutor)
     -> (filename, speaker_id). El valor viene de un <select> cuyas opciones
-    se generan desde settings_model.TTS_VOICES, así que se asume bien
-    formado; si no lo está, cae al primer valor del catálogo."""
+    se generan desde settings_model.tts_voices_choices() (autodescubiertas
+    en VOICES_DIR), así que se asume bien formado; si no lo está, o ya no
+    hay ninguna voz instalada, cae al primer valor disponible."""
+    choices = settings_model.tts_voices_choices()
     filename, _, speaker_raw = raw.partition("|")
-    if filename not in {v["filename"] for v in settings_model.TTS_VOICES}:
-        default = settings_model.TTS_VOICES[0]
+    if filename not in {v["filename"] for v in choices}:
+        if not choices:
+            return filename, int(speaker_raw) if speaker_raw else None
+        default = choices[0]
         return default["filename"], default["speaker_id"]
     return filename, int(speaker_raw) if speaker_raw else None
 
@@ -200,6 +210,65 @@ def tones_delete(tone_id: int):
     tones_model.delete(tone_id)
     logger.info(f"Tono eliminado: {tone['name']!r}")
     flash("Tono eliminado.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/voices/<voice_key>/download", methods=["POST"])
+@login_required
+def voices_download(voice_key: str):
+    if voices_catalog.get(voice_key) is None:
+        flash("Voz no encontrada en el catálogo.", "error")
+        return redirect(url_for("settings.index"))
+    if voice_key in voices_catalog.installed_keys():
+        flash("Esa voz ya está instalada.", "error")
+        return redirect(url_for("settings.index"))
+    if not voice_downloader.enqueue_download(voice_key):
+        flash("Ya hay una descarga en curso para esa voz.", "error")
+        return redirect(url_for("settings.index"))
+    logger.info(f"Descarga de voz iniciada: {voice_key}")
+    flash("Descarga iniciada. Verás el progreso en la lista de abajo.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/voices/<voice_key>/status")
+@login_required
+def voices_download_status(voice_key: str):
+    download = voices_model.get_download(voice_key)
+    return jsonify(download or {"voice_key": voice_key, "status": "unknown"})
+
+
+@bp.route("/voices/<filename>/label", methods=["POST"])
+@login_required
+def voices_set_label(filename: str):
+    speaker_raw = request.form.get("speaker_id", "")
+    speaker_id = int(speaker_raw) if speaker_raw else None
+    label = request.form.get("label", "").strip()
+
+    if not label:
+        flash("La etiqueta no puede estar vacía.", "error")
+        return redirect(url_for("settings.index"))
+    if voices_model.get_installed(filename, speaker_id) is None:
+        flash("Voz no encontrada.", "error")
+        return redirect(url_for("settings.index"))
+
+    voices_model.set_label(filename, speaker_id, label)
+    flash("Etiqueta actualizada.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/voices/<filename>/delete", methods=["POST"])
+@login_required
+def voices_delete(filename: str):
+    if filename == settings_model.tts_voice():
+        flash("No se puede eliminar la voz seleccionada actualmente. Elige otra voz primero.", "error")
+        return redirect(url_for("settings.index"))
+    if not any(v["filename"] == filename for v in voices_model.list_installed()):
+        flash("Voz no encontrada.", "error")
+        return redirect(url_for("settings.index"))
+
+    voices_model.delete_installed(filename)
+    logger.info(f"Voz eliminada: {filename}")
+    flash("Voz eliminada.", "success")
     return redirect(url_for("settings.index"))
 
 

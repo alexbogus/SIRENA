@@ -1,0 +1,21 @@
+{# Estado vacío compuesto (icono + texto + CTA opcional), en vez de una
+   frase gris suelta. Uso dentro de un {% for %}...{% else %}:
+   {{ empty_state("map-pin", "No hay zonas creadas todavía.") }}
+   Con CTA: {{ empty_state("radio-tower", "...", cta_href=url_for(...), cta_label="Añadir el primero") }}
+   colspan (opcional): si se usa dentro de un <tbody>, envuelve en <td colspan="N"> en vez de <div>. #}
+{% macro empty_state(icon, text, cta_href=none, cta_label=none, colspan=none) %}
+{% set inner %}
+<div class="flex flex-col items-center justify-center gap-2 py-10 text-center">
+    <i data-lucide="{{ icon }}" class="w-8 h-8 text-slate-700"></i>
+    <p class="text-slate-500 text-sm">{{ text }}</p>
+    {% if cta_href %}
+    <a href="{{ cta_href }}" class="text-brand-soft text-xs font-semibold hover:underline mt-1">{{ cta_label }}</a>
+    {% endif %}
+</div>
+{% endset %}
+{% if colspan %}
+<tr><td colspan="{{ colspan }}">{{ inner }}</td></tr>
+{% else %}
+{{ inner }}
+{% endif %}
+{% endmacro %}

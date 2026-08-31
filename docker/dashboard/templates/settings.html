@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% from "_page_header.html" import page_header %}
+{% from "_select.html" import select_dropdown %}
 {% block title %}Configuración{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Configuración</h1>
+{{ page_header("CONFIGURACIÓN", "Configuración") }}
 
-<form method="post" action="{{ url_for('settings.save') }}" class="bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-6 max-w-lg">
+<form method="post" action="{{ url_for('settings.save') }}" class="bg-navy-900 border border-white/10 rounded-xl p-4 space-y-6 max-w-lg">
     <div>
         <h2 class="font-medium mb-3">Intervalos de sondeo</h2>
         <div class="space-y-3">
@@ -11,13 +14,13 @@
                 <label class="block text-xs text-slate-400 mb-1">Lectura del feed del 112CV (segundos)</label>
                 <input type="number" name="cv112_poll_interval_s" value="{{ cv112_poll_interval_s }}"
                        min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">Sondeo de /status de los altavoces (segundos)</label>
                 <input type="number" name="status_poll_interval_s" value="{{ status_poll_interval_s }}"
                        min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
             </div>
         </div>
     </div>
@@ -31,16 +34,16 @@
         </p>
         <div class="space-y-3">
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) — días</label>
+                <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) - días</label>
                 <input type="number" name="db_log_retention_days" value="{{ db_log_retention_days }}"
                        min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
             </div>
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV — días</label>
+                <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV - días</label>
                 <input type="number" name="dedupe_retention_days" value="{{ dedupe_retention_days }}"
                        min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
             </div>
         </div>
     </div>
@@ -50,19 +53,18 @@
         <div class="space-y-3">
             <div>
                 <label class="block text-xs text-slate-400 mb-1">Voz</label>
-                <select name="tts_voice_choice" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
-                    {% for v in tts_voices %}
-                    {% set value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
-                    <option value="{{ value }}"
-                        {{ "selected" if v.filename == tts_voice and v.speaker_id == tts_speaker_id }}>
-                        {{ v.label }}
-                    </option>
-                    {% endfor %}
-                </select>
+                {% set _voice_opts = [] %}
+                {% set _ns_voice = namespace(selected="") %}
+                {% for v in tts_voices %}
+                {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
+                {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
+                {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}{% set _ns_voice.selected = _value %}{% endif %}
+                {% endfor %}
+                {{ select_dropdown("tts_voice_choice", _voice_opts, selected_value=_ns_voice.selected) }}
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">
-                    Velocidad de lectura ({{ tts_length_scale }}x — más alto = más lento)
+                    Velocidad de lectura ({{ tts_length_scale }}x, más alto = más lento)
                 </label>
                 <input type="range" name="tts_length_scale" value="{{ tts_length_scale }}"
                        min="{{ min_length_scale }}" max="{{ max_length_scale }}" step="0.05"
@@ -70,7 +72,7 @@
             </div>
             <div>
                 <label class="block text-xs text-slate-400 mb-1">
-                    Expresividad ({{ tts_expressiveness }} — más alto = prosodia menos plana/robótica)
+                    Expresividad ({{ tts_expressiveness }}, más alto = prosodia menos plana/robótica)
                 </label>
                 <input type="range" name="tts_expressiveness" value="{{ tts_expressiveness }}"
                        min="{{ min_expressiveness }}" max="{{ max_expressiveness }}" step="0.05"
@@ -97,12 +99,81 @@
         </div>
     </div>
 
-    <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
+    <button class="btn-brand px-4 py-2 text-sm">
         Guardar
     </button>
 </form>
 
-<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+    <div>
+        <h2 class="font-medium mb-1">Modelos de voz</h2>
+        <p class="text-xs text-slate-500">
+            Voces Piper instaladas y catálogo de voces en español descargables desde Hugging Face
+            (rhasspy/piper-voices), con verificación de integridad (tamaño + MD5).
+        </p>
+    </div>
+
+    <div>
+        <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Instaladas</h3>
+        <div class="space-y-2">
+            {% for v in tts_voices %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2 min-w-[140px]">
+                    <span class="text-sm">{{ v.label }}</span>
+                    <span class="text-xs text-slate-500">{{ v.language_code }} · {{ "%.0f"|format(v.size_bytes / 1048576) }} MB</span>
+                    {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}
+                    {{ badge('en uso', 'success') }}
+                    {% endif %}
+                </div>
+                {% if not (v.filename == tts_voice and v.speaker_id == tts_speaker_id) %}
+                <form method="post" action="{{ url_for('settings.voices_delete', filename=v.filename) }}"
+                      data-confirm="¿Eliminar la voz {{ v.label }}?" data-confirm-variant="danger">
+                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay voces instaladas.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="pt-2 border-t border-white/10">
+        <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Catálogo descargable (español)</h3>
+        <div class="space-y-2">
+            {% for c in voices_catalog %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2 min-w-[140px]">
+                    <span class="text-sm">{{ c.key }}</span>
+                    <span class="text-xs text-slate-500">{{ c.quality }} · {{ "%.0f"|format(c.size_bytes / 1048576) }} MB</span>
+                </div>
+                {% if c.key in installed_voice_keys %}
+                {{ badge('instalada', 'success') }}
+                {% else %}
+                <div class="flex items-center gap-2 shrink-0">
+                    <span id="voice-status-{{ c.key }}" class="text-xs text-slate-500"
+                        {% if c.key in voice_downloads_running %}data-polling="1"{% endif %}>
+                        {{ "Descargando..." if c.key in voice_downloads_running else "" }}
+                    </span>
+                    <form method="post" action="{{ url_for('settings.voices_download', voice_key=c.key) }}">
+                        <button class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
+                                {% if c.key in voice_downloads_running %}disabled{% endif %}>
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay voces en el catálogo.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
     <div>
         <h2 class="font-medium mb-1">Tonos</h2>
         <p class="text-xs text-slate-500">
@@ -113,15 +184,13 @@
 
     <div class="space-y-2">
         {% for t in tones %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-navy-800 rounded-lg px-3 py-2">
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
             <div class="flex items-center gap-2 min-w-[140px]">
                 <span class="text-sm">{{ t.name }}</span>
                 {% if t.is_default %}
-                <span class="text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300">por defecto</span>
+                {{ badge('por defecto', 'info') }}
                 {% endif %}
-                <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-emerald-900/60 text-emerald-300' if t.enabled else 'bg-navy-800 text-slate-500' }}">
-                    {{ 'habilitado' if t.enabled else 'deshabilitado' }}
-                </span>
+                {{ badge('habilitado', 'success') if t.enabled else badge('deshabilitado', 'neutral') }}
             </div>
             <div class="flex items-center gap-3 shrink-0">
                 <button type="button" class="tone-play text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
@@ -158,24 +227,24 @@
     </div>
 
     <form method="post" action="{{ url_for('settings.tones_upload') }}" enctype="multipart/form-data"
-          class="flex gap-2 items-end pt-2 border-t border-navy-800 flex-wrap">
+          class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap">
         <div class="flex-1 min-w-[140px]">
             <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm">
+            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
         </div>
         <div class="flex-1 min-w-[160px]">
-            <label class="block text-xs text-slate-400 mb-1">Archivo .wav</label>
-            <input type="file" name="file" accept="audio/wav,.wav" required
-                   class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-1.5 text-sm">
+            <label class="block text-xs text-slate-400 mb-1">Archivo (.wav o .mp3)</label>
+            <input type="file" name="file" accept="audio/wav,.wav,audio/mpeg,.mp3" required
+                   class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
         </div>
-        <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
+        <button class="btn-brand px-4 py-2 text-sm">
             Subir
         </button>
     </form>
     <audio id="tone-player" class="hidden"></audio>
 </div>
 
-<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
     <div>
         <h2 class="font-medium mb-1">Plantillas rápidas</h2>
         <p class="text-xs text-slate-500">
@@ -185,7 +254,7 @@
 
     <div class="space-y-2">
         {% for t in templates %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-navy-800 rounded-lg px-3 py-2">
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
             <div class="min-w-[140px]">
                 <div class="text-sm">{{ t.name }}</div>
                 <div class="text-xs text-slate-500 truncate max-w-xs">{{ t.text }}</div>
@@ -203,17 +272,17 @@
     </div>
 
     <form method="post" action="{{ url_for('settings.templates_create') }}"
-          class="space-y-2 pt-2 border-t border-navy-800">
+          class="space-y-2 pt-2 border-t border-white/10">
         <div>
             <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm">
+            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
             <label class="block text-xs text-slate-400 mb-1">Texto</label>
             <textarea name="text" required rows="2"
-                      class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm"></textarea>
+                      class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm"></textarea>
         </div>
-        <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
+        <button class="btn-brand px-4 py-2 text-sm">
             Añadir plantilla
         </button>
     </form>
@@ -302,6 +371,42 @@
     });
 
     player.addEventListener("ended", () => setPlaying(false));
+})();
+
+(function () {
+    const statusUrl = (key) => `{{ url_for('settings.voices_download_status', voice_key='__KEY__') }}`.replace("__KEY__", key);
+
+    function poll(key) {
+        const span = document.getElementById(`voice-status-${key}`);
+        if (!span) return;
+        span.textContent = "Descargando...";
+
+        const interval = setInterval(async () => {
+            let data;
+            try {
+                const resp = await fetch(statusUrl(key));
+                data = await resp.json();
+            } catch (err) {
+                return; // reintenta en el siguiente tick
+            }
+            if (data.status === "done") {
+                clearInterval(interval);
+                window.location.reload();
+            } else if (data.status === "error") {
+                clearInterval(interval);
+                span.textContent = `Error: ${data.error || "descarga fallida"}`;
+            }
+        }, 3000);
+    }
+
+    // El formulario "Descargar" se envía de forma nativa (POST + redirect);
+    // al volver a /settings, voice_downloads_running ya incluye esta key
+    // (recalculado en el servidor desde voice_downloads), así que el span
+    // se renderiza con data-polling="1" y arranca solo aquí abajo -- no
+    // hace falta enganchar el evento submit del formulario.
+    document.querySelectorAll('[id^="voice-status-"][data-polling="1"]').forEach((span) => {
+        poll(span.id.replace("voice-status-", ""));
+    });
 })();
 </script>
 {% endblock %}

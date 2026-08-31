@@ -4,31 +4,28 @@
 <div class="relative min-h-screen flex flex-col overflow-hidden isolate">
 
     <div class="pointer-events-none absolute inset-0 -z-20 bg-cover bg-center"
-         style="background-image:url('{{ url_for('static', filename='images/landing-background.jpeg') }}'); filter:brightness(.42) saturate(1.15) contrast(1.05);"></div>
+         style="background-image:url('{{ url_for('static', filename='images/landing-background.jpeg') }}'); filter:brightness(.5) saturate(.9) contrast(1.02);"></div>
     <div class="pointer-events-none absolute inset-0 -z-10"
          style="background:
-            radial-gradient(ellipse 700px 620px at 78% 58%, rgba(5,13,28,.8), transparent 70%),
-            linear-gradient(180deg, rgba(5,13,28,.82) 0%, rgba(5,13,28,.42) 42%, rgba(5,13,28,.58) 68%, rgba(5,13,28,.94) 100%);"></div>
+            radial-gradient(ellipse 900px 700px at 78% 58%, rgba(242,113,28,.04), transparent 70%),
+            linear-gradient(180deg, rgba(5,13,28,.85) 0%, rgba(5,13,28,.48) 42%, rgba(5,13,28,.62) 68%, rgba(5,13,28,.95) 100%);"></div>
 
     <div class="navbar max-w-6xl mx-auto w-full px-4">
         <div class="flex-1 flex items-center gap-2">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f2711c" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z" stroke-linejoin="round"/><path d="M9 12a3 3 0 0 0 6 0" stroke-linecap="round"/></svg>
-            <div class="leading-tight">
-                <div class="font-display font-bold text-lg">SIRENA</div>
-                <div class="text-[10px] text-slate-400">Sistema IP de envío y reconocimiento de nuevas alertas</div>
-            </div>
+            <span class="font-display font-bold text-lg leading-none">SIRENA</span>
         </div>
     </div>
 
     <div class="flex-1 flex items-center">
-        <div class="max-w-6xl mx-auto w-full px-4 grid lg:grid-cols-2 gap-12 items-center py-12">
+        <div class="max-w-6xl mx-auto w-full px-4 grid lg:grid-cols-2 gap-16 items-center py-20">
 
-            <div>
-                <div class="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 mb-6">
+            <div class="fade-in-up" style="--fade-delay: 0ms;">
+                <div class="inline-flex items-center gap-1.5 rounded-full bg-brand/10 border border-brand/20 text-brand-soft text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 mb-6">
                     <i data-lucide="plus" class="w-3 h-3"></i>
                     Sistema de megafonía IP · ALVPC Godella
                 </div>
-                <h1 class="text-4xl sm:text-5xl font-display font-bold leading-tight mb-5 [text-shadow:0_4px_24px_rgba(0,0,0,.65)]">
+                <h1 class="font-editorial italic font-medium text-4xl sm:text-5xl leading-[1.1] tracking-tight mb-5 pb-1 [text-shadow:0_4px_24px_rgba(0,0,0,.65)]">
                     SIRENA, <span class="text-brand">sistema IP de reconocimiento y envío de nuevas alertas</span>.
                 </h1>
                 <p class="text-slate-300 text-lg max-w-md [text-shadow:0_2px_12px_rgba(0,0,0,.7)]">
@@ -37,9 +34,9 @@
                 </p>
             </div>
 
-            <div class="card w-full max-w-sm mx-auto bg-navy-900/85 backdrop-blur-xl border border-navy-700/70 shadow-[0_25px_70px_-15px_rgba(0,0,0,.75)]">
+            <div class="card w-full max-w-sm mx-auto bg-navy-900/95 border border-white/10 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,.3)] fade-in-up" style="--fade-delay: 120ms;">
                 <div class="card-body items-center text-center">
-                    <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-navy-700 flex items-center justify-center overflow-hidden mb-2">
+                    <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-white/10 flex items-center justify-center overflow-hidden mb-2">
                         <img src="{{ url_for('static', filename='images/speaker-model.png') }}" class="w-[70px] h-[70px] object-contain" alt="Altavoz IP SIRENA">
                     </div>
                     <h2 class="card-title font-display text-lg uppercase tracking-wide">Login</h2>
@@ -50,9 +47,9 @@
                                 <span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Contraseña</span>
                             </label>
                             <input type="password" name="password" autofocus required
-                                   class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                                   class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                         </div>
-                        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+                        <button type="submit" class="btn btn-primary btn-block shadow-none active:scale-[0.98]">Entrar</button>
                     </form>
                     <p class="text-center text-xs text-slate-500 mt-4">Acceso restringido · Protección Civil Godella</p>
                 </div>

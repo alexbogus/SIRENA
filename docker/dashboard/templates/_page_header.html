@@ -1,0 +1,14 @@
+{# Cabecera editorial de página interna: etiqueta pequeña + <h1>, mismo
+   patrón en las 8 páginas del panel en vez de repetir el markup.
+   Uso: {{ page_header("PANEL DE CONTROL", "Panel") }}
+   subtitle (opcional): párrafo descriptivo bajo el <h1>, como ya usan
+   algunas páginas (Altavoces, Enviar mensaje). #}
+{% macro page_header(eyebrow, title, subtitle=none) %}
+<div class="mb-6">
+    <div class="eyebrow">{{ eyebrow }}</div>
+    <h1 class="text-2xl font-semibold tracking-tight">{{ title }}</h1>
+    {% if subtitle %}
+    <p class="text-sm text-slate-400 mt-0.5">{{ subtitle }}</p>
+    {% endif %}
+</div>
+{% endmacro %}

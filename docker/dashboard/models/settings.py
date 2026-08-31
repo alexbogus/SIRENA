@@ -1,6 +1,7 @@
 import bcrypt
 
 import config
+import models.voices as voices_model
 from db import db_cursor
 
 _DEFAULTS = {
@@ -40,14 +41,12 @@ MAX_TTS_NOISE = 1.0
 MIN_TTS_SENTENCE_SILENCE = 0.0
 MAX_TTS_SENTENCE_SILENCE = 2.0
 
-# Catálogo de voces instaladas por download_voice.sh (docker/piper/), con
-# etiqueta legible para el desplegable de /settings. speaker_id es None
-# para modelos de un solo locutor.
-TTS_VOICES = [
-    {"filename": "es_ES-sharvard-medium.onnx", "speaker_id": 1, "label": "Femenina (sharvard)"},
-    {"filename": "es_ES-sharvard-medium.onnx", "speaker_id": 0, "label": "Masculina (sharvard)"},
-    {"filename": "es_ES-davefx-medium.onnx", "speaker_id": None, "label": "Masculina (davefx, alternativa)"},
-]
+def tts_voices_choices() -> list[dict]:
+    """Voces instaladas en VOICES_DIR (autodescubiertas, ver models/voices.py),
+    con la misma forma {filename, speaker_id, label} que antes exponía el
+    catálogo hardcodeado TTS_VOICES -- gestionables ahora desde /settings
+    (descarga/eliminación) en vez de vía download_voice.sh a mano."""
+    return voices_model.list_installed()
 
 
 def get(key: str) -> str | None:

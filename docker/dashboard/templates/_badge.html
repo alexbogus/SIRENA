@@ -1,0 +1,19 @@
+{# Etiqueta de estado reutilizable, un único punto de verdad para el color de
+   cada significado (antes cada plantilla combinaba sus propias utilidades y
+   el mismo concepto -- "elemento activo/en uso" -- acababa en colores
+   distintos según la pantalla).
+   Uso: {{ badge("activo", "success") }}
+   tone: success (activo/confirmado/en uso) | warn (pausado/deshabilitar) |
+         danger (eliminar/no confirmado) | info (neutral informativo) |
+         neutral (inactivo/por defecto)
+#}
+{% macro badge(text, tone="neutral") %}
+{% set tones = {
+    "success": "bg-emerald-900/60 text-emerald-300 border-emerald-700/60",
+    "warn": "bg-amber-900/60 text-amber-300 border-amber-700/60",
+    "danger": "bg-red-900/60 text-red-300 border-red-700/60",
+    "info": "bg-sky-900/60 text-sky-300 border-sky-700/60",
+    "neutral": "bg-navy-800 text-slate-400 border-white/10",
+} %}
+<span class="text-xs px-2 py-0.5 rounded-full border font-medium {{ tones[tone] }}">{{ text }}</span>
+{% endmacro %}

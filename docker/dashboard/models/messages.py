@@ -116,6 +116,15 @@ def history_for_speaker(speaker_id: int, limit: int = 5) -> list[dict]:
     ]
 
 
+def count_today() -> int:
+    """Mensajes enviados hoy (hora local), para el resumen del panel."""
+    with db_cursor() as cur:
+        row = cur.execute(
+            "SELECT COUNT(*) AS c FROM messages WHERE date(sent_at) = date('now', 'localtime')"
+        ).fetchone()
+    return row["c"]
+
+
 def full_history() -> list[dict]:
     """Histórico completo de mensajes enviados a todos los altavoces, para la
     página de histórico global (ordenable/buscable en el cliente)."""

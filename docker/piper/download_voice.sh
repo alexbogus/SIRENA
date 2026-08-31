@@ -3,6 +3,11 @@
 # HuggingFace. Se ejecuta una vez; el resultado no se versiona en git, se
 # monta como volumen en el sidecar de Piper.
 #
+# NOTA: el flujo recomendado ahora es /settings -> "Modelos de voz" en el
+# dashboard, que además verifica integridad (tamaño + MD5), cosa que este
+# script no hace. Se mantiene solo como bootstrap rápido para desarrollo
+# local sin levantar el dashboard.
+#
 # - davefx (medium): voz original del proyecto, se mantiene como fallback.
 # - sharvard (medium): modelo multi-speaker (locutor 0 = masculina, 1 =
 #   femenina) con el mismo acento de España -- es lo que permite elegir
@@ -12,7 +17,7 @@ set -euo pipefail
 VOICE_DIR="$(dirname "$0")/voices"
 mkdir -p "$VOICE_DIR"
 
-BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES"
+BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/es/es_ES"
 
 download() {
     local voice="$1" quality="$2"

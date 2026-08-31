@@ -14,6 +14,7 @@ DB_PATH = Path(os.environ.get("DB_PATH", DATA_DIR / "dashboard.db"))
 SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
 
 PIPER_URL = os.environ.get("PIPER_URL", "http://127.0.0.1:5100/synthesize")
+PIPER_VOICES_DIR = Path(os.environ.get("PIPER_VOICES_DIR", "/voices"))
 CV112_FEED_URL = os.environ.get(
     "CV112_FEED_URL",
     "https://wpr.112cv.gva.es/external/api/storage/descargar/geojson/incidentes/incidente.geojson",

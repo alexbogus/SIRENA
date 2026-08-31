@@ -1,0 +1,149 @@
+{
+  "es_AR-daniela-high": {
+    "key": "es_AR-daniela-high",
+    "language_code": "es_AR",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "e373fb657c93877dbc438badeadff4cb",
+      "path": "es/es_AR/daniela/high/es_AR-daniela-high.onnx",
+      "size_bytes": 114199011
+    },
+    "onnx_json": {
+      "md5_digest": "b68d699a1779d98ee94c0cd9a08ba95b",
+      "path": "es/es_AR/daniela/high/es_AR-daniela-high.onnx.json",
+      "size_bytes": 7248
+    },
+    "quality": "high",
+    "speaker_id_map": {}
+  },
+  "es_ES-carlfm-x_low": {
+    "key": "es_ES-carlfm-x_low",
+    "language_code": "es_ES",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "4137b5aee01ea6241080fc4dbe59a8ee",
+      "path": "es/es_ES/carlfm/x_low/es_ES-carlfm-x_low.onnx",
+      "size_bytes": 28130791
+    },
+    "onnx_json": {
+      "md5_digest": "f4ab058cc8b5d024f1b123d06049df22",
+      "path": "es/es_ES/carlfm/x_low/es_ES-carlfm-x_low.onnx.json",
+      "size_bytes": 4159
+    },
+    "quality": "x_low",
+    "speaker_id_map": {}
+  },
+  "es_ES-davefx-medium": {
+    "key": "es_ES-davefx-medium",
+    "language_code": "es_ES",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "dc515cd4ecc5f6f72fe14a941188fc9c",
+      "path": "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx",
+      "size_bytes": 63201294
+    },
+    "onnx_json": {
+      "md5_digest": "dd157b5eaf6930bf949cf416d9a9307a",
+      "path": "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json",
+      "size_bytes": 4817
+    },
+    "quality": "medium",
+    "speaker_id_map": {}
+  },
+  "es_ES-mls_10246-low": {
+    "key": "es_ES-mls_10246-low",
+    "language_code": "es_ES",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "ab8e93c9d2714fd4481fbca4e2a38891",
+      "path": "es/es_ES/mls_10246/low/es_ES-mls_10246-low.onnx",
+      "size_bytes": 63104526
+    },
+    "onnx_json": {
+      "md5_digest": "8948a322c81cae2bc5fb1b9bbbc4961e",
+      "path": "es/es_ES/mls_10246/low/es_ES-mls_10246-low.onnx.json",
+      "size_bytes": 4160
+    },
+    "quality": "low",
+    "speaker_id_map": {}
+  },
+  "es_ES-mls_9972-low": {
+    "key": "es_ES-mls_9972-low",
+    "language_code": "es_ES",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "587f2fc38dc3f582e771c3748465e2a2",
+      "path": "es/es_ES/mls_9972/low/es_ES-mls_9972-low.onnx",
+      "size_bytes": 63104526
+    },
+    "onnx_json": {
+      "md5_digest": "97195bce39639d77af82c9c9c2110620",
+      "path": "es/es_ES/mls_9972/low/es_ES-mls_9972-low.onnx.json",
+      "size_bytes": 4159
+    },
+    "quality": "low",
+    "speaker_id_map": {}
+  },
+  "es_ES-sharvard-medium": {
+    "key": "es_ES-sharvard-medium",
+    "language_code": "es_ES",
+    "language_name": "Español",
+    "num_speakers": 2,
+    "onnx": {
+      "md5_digest": "77e6f9c26e92799fb04bb90b46bf1834",
+      "path": "es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx",
+      "size_bytes": 76733615
+    },
+    "onnx_json": {
+      "md5_digest": "e49cab310ce362145f7d94b347c291ff",
+      "path": "es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx.json",
+      "size_bytes": 4903
+    },
+    "quality": "medium",
+    "speaker_id_map": {
+      "F": 1,
+      "M": 0
+    }
+  },
+  "es_MX-ald-medium": {
+    "key": "es_MX-ald-medium",
+    "language_code": "es_MX",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "86374058e59b41ac3b7fe4181e1daad6",
+      "path": "es/es_MX/ald/medium/es_MX-ald-medium.onnx",
+      "size_bytes": 63201294
+    },
+    "onnx_json": {
+      "md5_digest": "31c5463bf001d6e69bf57fc5916c0908",
+      "path": "es/es_MX/ald/medium/es_MX-ald-medium.onnx.json",
+      "size_bytes": 4889
+    },
+    "quality": "medium",
+    "speaker_id_map": {}
+  },
+  "es_MX-claude-high": {
+    "key": "es_MX-claude-high",
+    "language_code": "es_MX",
+    "language_name": "Español",
+    "num_speakers": 1,
+    "onnx": {
+      "md5_digest": "cb1966e0ff20ca3aa010f6c9a0ce296a",
+      "path": "es/es_MX/claude/high/es_MX-claude-high.onnx",
+      "size_bytes": 63122309
+    },
+    "onnx_json": {
+      "md5_digest": "36882201922fabb409f18d284af3eddd",
+      "path": "es/es_MX/claude/high/es_MX-claude-high.onnx.json",
+      "size_bytes": 4963
+    },
+    "quality": "high",
+    "speaker_id_map": {}
+  }
+}

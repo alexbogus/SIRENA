@@ -7,6 +7,7 @@ import models.health as health_model
 import models.messages as messages_model
 import models.settings as settings_model
 import models.speakers as speakers_model
+import models.zones as zones_model
 from routes.auth import login_required
 
 bp = Blueprint("dashboard", __name__)
@@ -48,6 +49,8 @@ def index():
         speakers=speakers,
         health=_health_view(),
         auto_alerts_enabled=settings_model.auto_alerts_enabled(),
+        zones_active=len(zones_model.list_enabled()),
+        messages_today=messages_model.count_today(),
     )
 
 
@@ -55,8 +58,13 @@ def index():
 @login_required
 def api_speakers_status():
     speakers = [_speaker_view(sp) for sp in speakers_model.list_all()]
-    return jsonify({"speakers": speakers, "health": _health_view(),
-                     "auto_alerts_enabled": settings_model.auto_alerts_enabled()})
+    return jsonify({
+        "speakers": speakers,
+        "health": _health_view(),
+        "auto_alerts_enabled": settings_model.auto_alerts_enabled(),
+        "zones_active": len(zones_model.list_enabled()),
+        "messages_today": messages_model.count_today(),
+    })
 
 
 @bp.route("/messages/history")

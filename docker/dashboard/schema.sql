@@ -147,6 +147,31 @@ CREATE TABLE IF NOT EXISTS speaker_error_log (
     message     TEXT NOT NULL
 );
 
+-- Estado de descargas de modelos de voz Piper lanzadas desde /settings
+-- (services/voice_downloader.py). voice_key es la clave del catálogo
+-- vendorizado (data_static/piper_voices_es.json), no el nombre de fichero.
+CREATE TABLE IF NOT EXISTS voice_downloads (
+    voice_key    TEXT PRIMARY KEY,
+    status       TEXT NOT NULL,      -- 'running' | 'done' | 'error'
+    error        TEXT,
+    started_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    finished_at  TEXT
+);
+
+-- Etiquetas legibles curadas por el usuario para voces instaladas
+-- (filename + speaker_id, ver models/voices.py). Si no hay fila aquí se
+-- genera una etiqueta por defecto a partir de los metadatos del .onnx.json.
+-- speaker_id usa el sentinel -1 para "sin locutor" (modelo mono-speaker) en
+-- vez de NULL: SQLite trata cada NULL como distinto en una PRIMARY KEY
+-- compuesta, así que dos filas con speaker_id NULL no chocarían entre sí y
+-- el upsert de set_label() insertaría duplicados en vez de actualizar.
+CREATE TABLE IF NOT EXISTS voice_labels (
+    filename   TEXT NOT NULL,
+    speaker_id INTEGER NOT NULL DEFAULT -1,
+    label      TEXT NOT NULL,
+    PRIMARY KEY (filename, speaker_id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     occurred_at TEXT NOT NULL DEFAULT (datetime('now')),

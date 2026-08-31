@@ -30,7 +30,7 @@ def index():
         zones=zones_model.list_all(),
         speakers=speakers_model.list_all(),
         tones=tones_model.list_enabled(),
-        tts_voices=settings_model.TTS_VOICES,
+        tts_voices=settings_model.tts_voices_choices(),
         templates=message_templates_model.list_all(),
     )
 

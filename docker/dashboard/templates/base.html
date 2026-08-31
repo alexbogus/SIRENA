@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Panel{% endblock %} · SIRENA</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2711c' stroke-width='2'%3E%3Cpath d='M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z' stroke-linejoin='round'/%3E%3Cpath d='M9 12a3 3 0 0 0 6 0' stroke-linecap='round'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=Newsreader:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -13,13 +14,31 @@
         theme: {
             extend: {
                 colors: {
+                    // Escala "grafito neutro" (croma ~0, sin tinte azul):
+                    // se mantiene el nombre "navy" para no forzar un
+                    // find-and-replace de clases en cada plantilla — es un
+                    // único punto de verdad, ver CLAUDE.md/plan de diseño.
                     navy: {
-                        950: '#050d1c',
-                        900: '#0a1830',
-                        850: '#0e2042',
-                        800: '#132a52',
-                        700: '#1c3a6c',
-                        600: '#2a4d8a',
+                        950: '#121212',
+                        900: '#1a1a1a',
+                        850: '#202020',
+                        800: '#262626',
+                        700: '#333333',
+                        600: '#4d4d4d',
+                    },
+                    // Sobrescribe el slate por defecto de Tailwind (azulado)
+                    // por una escala neutra que combine con el grafito de
+                    // fondo, en vez de convivir dos familias de gris.
+                    slate: {
+                        100: '#f2f2f1',
+                        200: '#e2e2e0',
+                        300: '#c7c7c4',
+                        400: '#a3a3a0',
+                        500: '#8a8a87',
+                        600: '#6b6b68',
+                        700: '#525250',
+                        800: '#3a3a38',
+                        900: '#232322',
                     },
                     brand: {
                         DEFAULT: '#f2711c',
@@ -30,12 +49,14 @@
                 fontFamily: {
                     sans: ['"Public Sans"', 'system-ui', 'sans-serif'],
                     display: ['"Barlow Condensed"', 'system-ui', 'sans-serif'],
+                    editorial: ['"Newsreader"', 'serif'],
                 },
             },
         },
     }
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='js/history-table.js') }}"></script>
     <style>
         h1, h2, h3, .font-display { font-family: 'Barlow Condensed', system-ui, sans-serif; }
 
@@ -49,19 +70,69 @@
             color-scheme: dark;
             --p: 69.56% 0.1737 48.69;    /* primary = naranja de marca */
             --pc: 19.35% 0.0211 47.60;
-            --s: 37.21% 0.0864 254.85;   /* secondary = navy-700 */
-            --sc: 96.76% 0.0070 247.90;
+            --s: 32.11% 0 0;             /* secondary = navy-700 (grafito neutro) */
+            --sc: 95% 0 0;
             --a: 83.32% 0.1069 54.40;    /* accent = naranja suave */
             --ac: 19.35% 0.0211 47.60;
-            --n: 25.32% 0.0696 261.53;   /* neutral = navy-850 */
-            --nc: 96.76% 0.0070 247.90;
-            --b1: 15.40% 0.0314 262.27;  /* base-100 = navy-950 */
-            --b2: 21.01% 0.0460 259.50;  /* base-200 = navy-900 */
-            --b3: 29.57% 0.0761 259.50;  /* base-300 = navy-800 */
-            --bc: 93.51% 0.0141 247.98;
+            --n: 24.35% 0 0;             /* neutral = navy-850 (grafito neutro) */
+            --nc: 95% 0 0;
+            --b1: 18.22% 0 0;            /* base-100 = navy-950 (grafito neutro) */
+            --b2: 21.78% 0 0;            /* base-200 = navy-900 (grafito neutro) */
+            --b3: 26.86% 0 0;            /* base-300 = navy-800 (grafito neutro) */
+            --bc: 95% 0 0;
             --rounded-box: 1rem;
             --rounded-btn: 0.6rem;
         }
+
+        /* Entrada suave para pantallas de acceso (login/setup): fade + leve
+           desplazamiento, desactivada por completo si el usuario prefiere
+           motion reducido. No se usa scroll, todo está above-the-fold. */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(12px);
+            animation: fade-in-up 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: var(--fade-delay, 0ms);
+        }
+        @keyframes fade-in-up {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .fade-in-up { animation: none; opacity: 1; transform: none; }
+        }
+
+        /* Anillo de foco visible para navegación por teclado en toda la app,
+           en vez de retocar focus:outline-none elemento a elemento. */
+        :focus-visible {
+            outline: 2px solid rgba(242, 113, 28, .6);
+            outline-offset: 2px;
+        }
+
+        /* Cifras que cambian (RSSI, volumen, contadores): con tabular-nums no
+           "bailan" de anchura al refrescar cada pocos segundos. */
+        .tnum { font-variant-numeric: tabular-nums; }
+
+        /* Etiqueta editorial sobre cada <h1> interno (mismo lenguaje que el
+           badge del login), vía la macro _page_header.html. */
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 178, 122, .8); /* brand-soft/80 */
+            margin-bottom: 0.375rem;
+        }
+
+        /* Botón primario único: sustituye a las variantes bg-brand hechas a
+           mano que había repetidas por plantilla con radios/altos distintos. */
+        .btn-brand {
+            background-color: #f2711c;
+            color: #fff;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 150ms, transform 150ms;
+        }
+        .btn-brand:hover { background-color: #c65613; }
+        .btn-brand:active { transform: scale(0.98); }
     </style>
 </head>
 <body class="bg-navy-950 text-slate-100 min-h-screen font-sans">
@@ -69,7 +140,7 @@
     <div class="drawer lg:drawer-open">
         <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col">
-            <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b border-navy-800 bg-navy-900">
+            <div class="lg:hidden flex items-center justify-between px-4 py-3 border-b border-white/10 bg-navy-900">
                 <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f2711c" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z" stroke-linejoin="round"/><path d="M9 12a3 3 0 0 0 6 0" stroke-linecap="round"/></svg>
                     <span class="font-display font-bold text-lg leading-none">SIRENA</span>
@@ -99,7 +170,7 @@
         </div>
         <div class="drawer-side z-20">
             <label for="sidebar-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-            <aside class="w-60 min-h-full bg-navy-900 border-r border-navy-800 flex flex-col">
+            <aside class="w-60 min-h-full bg-navy-900 border-r border-white/10 flex flex-col">
                 <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2 px-5 py-5">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f2711c" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V5l-8-3Z" stroke-linejoin="round"/><path d="M9 12a3 3 0 0 0 6 0" stroke-linecap="round"/></svg>
                     <span class="font-display font-bold text-lg leading-none">SIRENA</span>
@@ -126,6 +197,9 @@
                     </li>
                     {% endfor %}
                 </ul>
+                <div class="px-5 py-3 border-t border-white/10 text-[11px] text-slate-500 leading-tight">
+                    Protección Civil Godella<br>Despliegue BRAVO 2
+                </div>
                 <form method="post" action="{{ url_for('auth.logout') }}" class="px-3 pb-5">
                     <button class="btn btn-ghost btn-block justify-start gap-3 text-slate-400 hover:text-red-400">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Salir
@@ -139,7 +213,7 @@
     {% endif %}
 
     <div id="confirm-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 px-4">
-        <div class="modal-box bg-navy-900 border border-navy-800">
+        <div class="modal-box bg-navy-900 border border-white/10">
             <p id="confirm-modal-text" class="text-sm text-slate-200 mb-5"></p>
             <div class="flex justify-end gap-2">
                 <button type="button" id="confirm-modal-cancel" class="btn btn-sm btn-ghost">Cancelar</button>
@@ -259,6 +333,53 @@
         document.addEventListener("click", () => {
             document.querySelectorAll("[data-dropdown-panel]").forEach(p => p.classList.add("hidden"));
         });
+    })();
+
+    (function () {
+        // Desplegable de selección única con estilo propio: sustituye a
+        // <select> nativo, cuyo popup de opciones lo pinta el sistema
+        // operativo (siempre en azul de acento, sin poder colorearlo desde
+        // CSS). Cada <div data-select-dropdown> lleva un <select> real
+        // oculto (mismo name/id, para formularios y JS existentes) más un
+        // botón [data-dropdown-toggle-btn] y un panel [data-dropdown-panel]
+        // con botones [data-dropdown-option]. Reutiliza el mismo cierre-al-
+        // click-fuera que el desplegable de casillas de arriba (mismo
+        // atributo data-dropdown-panel).
+        function initSelectDropdown(root) {
+            const select = root.querySelector("select");
+            const btn = root.querySelector("[data-dropdown-toggle-btn]");
+            const panel = root.querySelector("[data-dropdown-panel]");
+            const label = root.querySelector("[data-dropdown-label]");
+            const options = Array.from(root.querySelectorAll("[data-dropdown-option]"));
+
+            function updateLabel() {
+                const opt = select.options[select.selectedIndex];
+                label.textContent = opt ? opt.textContent : "";
+                options.forEach(o => {
+                    const check = o.querySelector("[data-lucide]");
+                    check.classList.toggle("invisible", o.dataset.value !== select.value);
+                });
+            }
+
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const isOpen = !panel.classList.contains("hidden");
+                document.querySelectorAll("[data-dropdown-panel]").forEach(p => p.classList.add("hidden"));
+                panel.classList.toggle("hidden", isOpen);
+            });
+            panel.addEventListener("click", (e) => e.stopPropagation());
+            options.forEach(o => {
+                o.addEventListener("click", () => {
+                    select.value = o.dataset.value;
+                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                    updateLabel();
+                    panel.classList.add("hidden");
+                });
+            });
+            updateLabel();
+        }
+
+        document.querySelectorAll("[data-select-dropdown]").forEach(initSelectDropdown);
     })();
     </script>
     {% block scripts %}{% endblock %}

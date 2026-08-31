@@ -9,6 +9,7 @@ from flask import Flask
 import config
 import db
 import models.settings as settings_model
+import models.voices as voices_model
 from scheduler import scheduler
 from services.cv112_poller import poll_once as cv112_poll_once
 from services.log_retention import run_once as log_retention_run_once
@@ -21,6 +22,7 @@ logger = config.get_logger("app")
 def create_app() -> Flask:
     app = Flask(__name__)
     db.init_db()
+    voices_model.mark_interrupted_downloads()
     app.secret_key = config.SECRET_KEY or _fallback_secret_key()
 
     from routes.auth import bp as auth_bp

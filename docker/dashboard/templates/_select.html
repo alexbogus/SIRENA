@@ -1,0 +1,39 @@
+{# Desplegable de selección única con estilo propio (sustituye a <select>
+   nativo, cuya lista de opciones la pinta el sistema operativo y no se
+   puede colorear — ver DESIGN.md, sección "Selects nativos").
+   Mantiene un <select> real oculto (mismo name/id, sr-only) para que
+   formularios y JS existentes (lectura de .value, listeners de "change")
+   sigan funcionando sin cambios; el botón+panel visible solo lo controla.
+
+   Uso: {{ select_dropdown("tone_id", [{"value": "", "label": "Tono por defecto"}] + tone_items, selected_value="") }}
+   - options: lista de dicts {"value": ..., "label": ...}
+   - selected_value: valor ya seleccionado (se compara como string)
+   - id: id del <select> real, si algún script lo necesita (getElementById)
+   - size: "sm" (text-xs, más compacto) o "md" (por defecto)
+#}
+{% macro select_dropdown(name, options, selected_value=none, id=none, size="md") %}
+{% set sel = selected_value|string %}
+{% set pad = "px-2 py-1.5 text-xs" if size == "sm" else "px-3 py-2 text-sm" %}
+<div class="relative" data-select-dropdown>
+    <select name="{{ name }}" {% if id %}id="{{ id }}"{% endif %} class="sr-only" tabindex="-1" aria-hidden="true">
+        {% for opt in options %}
+        <option value="{{ opt.value }}" {{ 'selected' if opt.value|string == sel else '' }}>{{ opt.label }}</option>
+        {% endfor %}
+    </select>
+    <button type="button" data-dropdown-toggle-btn
+            class="w-full flex items-center justify-between gap-2 bg-navy-800 border border-white/10 rounded-lg {{ pad }} text-left hover:border-navy-600">
+        <span data-dropdown-label class="truncate"></span>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
+    </button>
+    <div data-dropdown-panel
+         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-navy-900 border border-white/10 rounded-lg shadow-lg p-1 space-y-0.5">
+        {% for opt in options %}
+        <button type="button" data-dropdown-option data-value="{{ opt.value }}"
+                class="w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-navy-800 text-sm">
+            <span class="truncate">{{ opt.label }}</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 text-brand shrink-0 {{ '' if opt.value|string == sel else 'invisible' }}"></i>
+        </button>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}

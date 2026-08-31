@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% from "_multiselect.html" import multiselect %}
+{% from "_select.html" import select_dropdown %}
+{% from "_badge.html" import badge %}
 {% block title %}Enviar mensaje{% endblock %}
 {% block content %}
 {% set _zone_items = [] %}
@@ -8,6 +10,7 @@
 {% for sp in speakers if sp.enabled %}{% set _speaker_items = _speaker_items + [{"id": sp.id, "label": sp.name}] %}{% endfor %}
 
 <div class="mb-6">
+    <div class="eyebrow">ENVÍO MANUAL</div>
     <h1 class="text-2xl font-semibold">Enviar mensaje manual</h1>
     <p class="text-sm text-slate-400 mt-0.5">Escribe o selecciona una plantilla, elige el destino y emite por megafonía.</p>
 </div>
@@ -17,22 +20,22 @@
     <!-- Columna izquierda: texto + plantillas -->
     <div class="lg:col-span-7 space-y-6">
 
-        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-4">
+        <div class="card bg-navy-900 border border-white/10 rounded-xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h2 class="font-medium flex items-center gap-2">
                     <i data-lucide="pen-line" class="w-4 h-4 text-brand"></i> Texto del mensaje
                 </h2>
-                <span class="text-xs text-slate-500 font-mono" id="char-count">0 caracteres</span>
+                <span class="text-xs text-slate-500 font-mono tnum" id="char-count">0 caracteres</span>
             </div>
 
             <textarea name="text" id="text-input" rows="5" required
-                      class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm"
+                      class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm"
                       placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
 
-            <div class="bg-navy-950/60 border border-navy-800 rounded-lg p-3 space-y-3">
+            <div class="bg-navy-950/60 border border-white/10 rounded-lg p-3 space-y-3">
                 <div class="flex items-center gap-3 flex-wrap">
                     <button type="button" id="preview-btn"
-                            class="bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                            class="bg-navy-800 hover:bg-navy-700 border border-white/10 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
                         <i data-lucide="play-circle" class="w-4 h-4"></i>
                         <span id="preview-btn-label">Escuchar preview</span>
                     </button>
@@ -43,31 +46,28 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Tono de preámbulo</label>
-                        <select name="tone_id" id="tone-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
-                            <option value="">Por defecto</option>
-                            {% for t in tones %}
-                            <option value="{{ t.id }}">{{ t.name }}</option>
-                            {% endfor %}
-                        </select>
+                        {% set _tone_opts = [{"value": "", "label": "Por defecto"}] %}
+                        {% for t in tones %}{% set _tone_opts = _tone_opts + [{"value": t.id, "label": t.name}] %}{% endfor %}
+                        {{ select_dropdown("tone_id", _tone_opts, selected_value="", id="tone-select", size="sm") }}
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Voz (solo preview)</label>
-                        <select id="voice-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
-                            <option value="">Por defecto</option>
-                            {% for v in tts_voices %}
-                            {% set value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
-                            <option value="{{ value }}">{{ v.label }}</option>
-                            {% endfor %}
-                        </select>
+                        {% set _voice_opts = [{"value": "", "label": "Por defecto"}] %}
+                        {% for v in tts_voices %}
+                        {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
+                        {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
+                        {% endfor %}
+                        {{ select_dropdown("voice_choice", _voice_opts, selected_value="", id="voice-select", size="sm") }}
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Repeticiones (solo preview)</label>
-                        <select id="repeats-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
-                            <option value="1">1 vez</option>
-                            <option value="2">2 veces</option>
-                            <option value="3">3 veces</option>
-                            <option value="5">5 veces</option>
-                        </select>
+                        {% set _repeat_opts = [
+                            {"value": "1", "label": "1 vez"},
+                            {"value": "2", "label": "2 veces"},
+                            {"value": "3", "label": "3 veces"},
+                            {"value": "5", "label": "5 veces"},
+                        ] %}
+                        {{ select_dropdown("repeats", _repeat_opts, selected_value="1", id="repeats-select", size="sm") }}
                     </div>
                 </div>
                 <p class="text-xs text-slate-500">
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-3">
+        <div class="card bg-navy-900 border border-white/10 rounded-xl p-5 space-y-3">
             <h2 class="font-medium flex items-center justify-between">
                 <span class="flex items-center gap-2">
                     <i data-lucide="zap" class="w-4 h-4 text-brand"></i> Plantillas rápidas
@@ -87,7 +87,7 @@
             <div class="space-y-2">
                 {% for t in templates %}
                 <button type="button" onclick="applyTemplate({{ t.text|tojson }})"
-                        class="w-full text-left p-2.5 rounded-lg bg-navy-800/60 hover:bg-navy-800 border border-navy-800 hover:border-navy-700 transition-all group">
+                        class="w-full text-left p-2.5 rounded-lg bg-navy-800/60 hover:bg-navy-800 border border-white/10 hover:border-white/10 transition-all group">
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-medium text-slate-200 group-hover:text-brand-soft">{{ t.name }}</span>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400"></i>
@@ -108,12 +108,12 @@
     <!-- Columna derecha: destino + envío -->
     <div class="lg:col-span-5 space-y-6">
 
-        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-3">
-            <h2 class="font-medium flex items-center gap-2 border-b border-navy-800 pb-3">
+        <div class="card bg-navy-900 border border-white/10 rounded-xl p-5 space-y-3">
+            <h2 class="font-medium flex items-center gap-2 border-b border-white/10 pb-3">
                 <i data-lucide="megaphone" class="w-4 h-4 text-brand"></i> Destino
             </h2>
 
-            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+            <label class="flex items-center justify-between p-3 rounded-lg border border-white/10 bg-navy-950/60 hover:border-white/10 cursor-pointer transition-colors">
                 <div class="flex items-center gap-3">
                     <input type="radio" name="target" value="all" id="target-all" checked>
                     <div>
@@ -124,7 +124,7 @@
                 <span class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand-soft border border-brand/30">{{ speakers|selectattr('enabled')|list|length }} altavoces</span>
             </label>
 
-            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+            <label class="flex items-center justify-between p-3 rounded-lg border border-white/10 bg-navy-950/60 hover:border-white/10 cursor-pointer transition-colors">
                 <div class="flex items-center gap-3">
                     <input type="radio" name="target" value="zones" id="target-zones">
                     <div>
@@ -135,11 +135,11 @@
                 <i data-lucide="map-pin" class="w-4 h-4 text-slate-500"></i>
             </label>
 
-            <div id="zone-picker" class="hidden pl-3 border-l-2 border-navy-800">
+            <div id="zone-picker" class="hidden pl-3 border-l-2 border-white/10">
                 {{ multiselect("zone_ids", _zone_items, [], "Sin zonas seleccionadas", value_attr="id", label_attr="label") }}
             </div>
 
-            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+            <label class="flex items-center justify-between p-3 rounded-lg border border-white/10 bg-navy-950/60 hover:border-white/10 cursor-pointer transition-colors">
                 <div class="flex items-center gap-3">
                     <input type="radio" name="target" value="speakers" id="target-speakers">
                     <div>
@@ -147,16 +147,16 @@
                         <div class="text-xs text-slate-500">Ideal para pruebas puntuales</div>
                     </div>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300">Pruebas</span>
+                {{ badge('Pruebas', 'info') }}
             </label>
 
-            <div id="speaker-picker" class="hidden pl-3 border-l-2 border-navy-800">
+            <div id="speaker-picker" class="hidden pl-3 border-l-2 border-white/10">
                 {{ multiselect("speaker_ids", _speaker_items, [], "Sin altavoces seleccionados", value_attr="id", label_attr="label") }}
             </div>
         </div>
 
         <button type="button" onclick="openConfirm()"
-                class="w-full bg-brand hover:bg-brand-dark rounded-lg px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2">
+                class="w-full btn-brand px-4 py-3 text-sm flex items-center justify-center gap-2">
             <i data-lucide="send" class="w-4 h-4"></i> Emitir mensaje
         </button>
 
@@ -165,7 +165,7 @@
 
 <!-- Modal: confirmación de emisión -->
 <dialog id="confirm_broadcast_modal" class="modal">
-    <div class="modal-box bg-navy-900 border border-navy-800 max-w-md">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-md">
         <div class="flex items-start gap-4">
             <div class="w-11 h-11 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center shrink-0 text-brand text-lg">
                 <i data-lucide="radio-tower" class="w-5 h-5"></i>
@@ -176,8 +176,8 @@
             </div>
         </div>
 
-        <div class="mt-4 p-3 bg-navy-950/80 rounded-lg border border-navy-800 space-y-2 text-xs">
-            <div class="flex justify-between border-b border-navy-800 pb-1.5">
+        <div class="mt-4 p-3 bg-navy-950/80 rounded-lg border border-white/10 space-y-2 text-xs">
+            <div class="flex justify-between border-b border-white/10 pb-1.5">
                 <span class="text-slate-400">Destino:</span>
                 <span id="confirm-destino" class="font-medium text-slate-200 text-right"></span>
             </div>
@@ -187,10 +187,10 @@
             </div>
         </div>
 
-        <div class="modal-action border-t border-navy-800 pt-4 mt-4">
+        <div class="modal-action border-t border-white/10 pt-4 mt-4">
             <button type="button" onclick="confirm_broadcast_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
             <button type="button" onclick="submitSend()"
-                    class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                    class="btn-brand px-4 py-2 text-sm flex items-center gap-2">
                 <i data-lucide="volume-2" class="w-4 h-4"></i> Emitir ahora
             </button>
         </div>

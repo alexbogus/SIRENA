@@ -1,10 +1,15 @@
 {% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% from "_empty_state.html" import empty_state %}
 {% block title %}Reglas de alerta 112CV{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-4">
-    <h1 class="text-xl font-semibold">Reglas de alerta automática (112CV)</h1>
+    <div>
+        <div class="eyebrow">REGLAS AUTOMÁTICAS 112CV</div>
+        <h1 class="text-2xl font-semibold tracking-tight">Reglas de alerta automática (112CV)</h1>
+    </div>
     <form method="post" action="{{ url_for('rules.rescan') }}">
-        <button class="flex items-center gap-1.5 text-sm bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-3 py-1.5">
+        <button class="flex items-center gap-1.5 text-sm bg-navy-800 hover:bg-navy-700 border border-white/10 rounded-lg px-3 py-1.5">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Re-escanear feed 112CV
         </button>
     </form>
@@ -18,19 +23,17 @@
     dashboard principal.
 </p>
 
-<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mb-6">
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mb-6">
     <h2 class="font-medium mb-3">Nueva regla</h2>
     {% include "_rule_form.html" with context %}
 </div>
 
 <div class="space-y-3">
     {% for r in rules %}
-    <div class="bg-navy-900 border border-navy-800 rounded-xl p-4">
+    <div class="bg-navy-900 border border-white/10 rounded-xl p-4">
         <div class="flex items-center justify-between mb-2">
             <span class="font-medium">{{ r.name }}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-emerald-900/60 text-emerald-300' if r.enabled else 'bg-navy-800 text-slate-500' }}">
-                {{ 'activa' if r.enabled else 'inactiva' }}
-            </span>
+            {{ badge('activa', 'success') if r.enabled else badge('inactiva', 'neutral') }}
         </div>
         <div class="text-xs text-slate-400 mb-1">Municipios: {{ r.municipios|join(', ') if r.municipios else 'todos' }}</div>
         <div class="text-xs text-slate-400 mb-1">Categorías: {{ r.categorias|map('join', '>')|join(', ') if r.categorias else 'todas' }}</div>
@@ -50,7 +53,7 @@
         </form>
     </div>
     {% else %}
-    <p class="text-slate-500 text-sm">No hay reglas configuradas todavía (ningún incidente se anunciará automáticamente).</p>
+    {{ empty_state("workflow", "No hay reglas configuradas todavía (ningún incidente se anunciará automáticamente).") }}
     {% endfor %}
 </div>
 {% endblock %}

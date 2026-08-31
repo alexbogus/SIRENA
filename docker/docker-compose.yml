@@ -7,8 +7,13 @@ services:
     volumes:
       - ./dashboard/data:/app/data
       - ./dashboard/logs:/app/logs
+      # Compartido con piper: el dashboard descarga/elimina modelos de voz
+      # aquí directamente (ver /settings -> "Modelos de voz"), piper solo
+      # los lee de forma perezosa. Así piper no necesita salida a internet.
+      - ./piper/voices:/voices
     environment:
       - PIPER_URL=http://127.0.0.1:5100/synthesize
+      - PIPER_VOICES_DIR=/voices
       - LOG_LEVEL=INFO
     restart: unless-stopped
     depends_on:

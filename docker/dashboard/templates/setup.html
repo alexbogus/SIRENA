@@ -2,9 +2,9 @@
 {% block title %}Configuración inicial{% endblock %}
 {% block content %}
 <div class="min-h-screen flex items-center justify-center px-4">
-    <div class="card w-full max-w-sm bg-navy-900 border border-navy-800 shadow-2xl">
+    <div class="card w-full max-w-sm bg-navy-900/95 border border-white/10 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,.3)] fade-in-up">
         <div class="card-body items-center text-center">
-            <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-navy-700 flex items-center justify-center overflow-hidden mb-2">
+            <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-white/10 flex items-center justify-center overflow-hidden mb-2">
                 <img src="{{ url_for('static', filename='images/speaker-model.png') }}" class="w-[70px] h-[70px] object-contain" alt="Altavoz IP SIRENA">
             </div>
             <h1 class="card-title font-display text-2xl">SIRENA</h1>
@@ -15,16 +15,16 @@
                         <span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Contraseña (mínimo 8 caracteres)</span>
                     </label>
                     <input type="password" name="password" required minlength="8"
-                           class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                           class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
                 <div class="form-control w-full">
                     <label class="label py-0 mb-2">
                         <span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Repite la contraseña</span>
                     </label>
                     <input type="password" name="confirm" required minlength="8"
-                           class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                           class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Establecer contraseña</button>
+                <button type="submit" class="btn btn-primary btn-block shadow-none active:scale-[0.98]">Establecer contraseña</button>
             </form>
         </div>
     </div>

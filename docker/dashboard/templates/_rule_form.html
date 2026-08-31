@@ -1,10 +1,11 @@
 {% from "_multiselect.html" import multiselect %}
+{% from "_select.html" import select_dropdown %}
 {% set editing = r is defined and r %}
 <form method="post" action="{{ url_for('rules.edit', rule_id=r.id) if editing else url_for('rules.create') }}" class="space-y-3">
     <div>
         <label class="block text-xs text-slate-400 mb-1">Nombre</label>
         <input name="name" value="{{ r.name if editing else '' }}" required
-               class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+               class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Municipios (vacío = todos)</label>
@@ -21,26 +22,20 @@
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Destino</label>
-        <select name="target_zone_id" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
-            <option value="">Todos los altavoces</option>
-            {% for z in zones %}
-            <option value="{{ z.id }}" {{ 'selected' if editing and r.target_zone_id == z.id else '' }}>{{ z.name }}{{ ' (deshabilitada)' if not z.enabled else '' }}</option>
-            {% endfor %}
-        </select>
+        {% set _zone_opts = [{"value": "", "label": "Todos los altavoces"}] %}
+        {% for z in zones %}{% set _zone_opts = _zone_opts + [{"value": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
+        {{ select_dropdown("target_zone_id", _zone_opts, selected_value=(r.target_zone_id if editing and r.target_zone_id else "")) }}
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Tono</label>
-        <select name="tone_id" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
-            <option value="">Tono por defecto</option>
-            {% for t in tones %}
-            <option value="{{ t.id }}" {{ 'selected' if editing and r.tone_id == t.id else '' }}>{{ t.name }}</option>
-            {% endfor %}
-        </select>
+        {% set _tone_opts = [{"value": "", "label": "Tono por defecto"}] %}
+        {% for t in tones %}{% set _tone_opts = _tone_opts + [{"value": t.id, "label": t.name}] %}{% endfor %}
+        {{ select_dropdown("tone_id", _tone_opts, selected_value=(r.tone_id if editing and r.tone_id else "")) }}
     </div>
     <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" name="enabled" {{ 'checked' if not editing or r.enabled else '' }}> Regla activa
     </label>
-    <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
+    <button class="btn-brand px-4 py-2 text-sm">
         {{ 'Guardar cambios' if editing else 'Crear regla' }}
     </button>
 </form>

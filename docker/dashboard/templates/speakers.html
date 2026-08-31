@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% from "_multiselect.html" import multiselect %}
+{% from "_badge.html" import badge %}
+{% from "_empty_state.html" import empty_state %}
+{% from "_select.html" import select_dropdown %}
 {% block title %}Altavoces{% endblock %}
 {% block content %}
 {% set _zns = namespace(items=[]) %}
@@ -7,9 +10,10 @@
 
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
-        <h1 class="text-2xl font-semibold flex items-center gap-3">
+        <div class="eyebrow">GESTIÓN DE ALTAVOCES</div>
+        <h1 class="text-2xl font-semibold tracking-tight flex items-center gap-3">
             Altavoces
-            <span class="badge bg-navy-800 text-slate-400 border-navy-700 text-xs font-medium">{{ speakers|length }} registrados</span>
+            {{ badge(speakers|length ~ ' registrados', 'neutral') }}
         </h1>
         <p class="text-sm text-slate-400 mt-0.5">Administración, asignación de zonas y estado de la red de megafonía.</p>
     </div>
@@ -19,27 +23,26 @@
 </div>
 
 <!-- Filtros -->
-<div class="card bg-navy-900 border border-navy-800 mb-5">
+<div class="card bg-navy-900 border border-white/10 mb-5">
     <div class="card-body p-4 flex-row flex-wrap items-center gap-4">
         <div class="relative flex-1 min-w-[220px]">
             <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
             <input type="text" id="speaker-search" placeholder="Buscar por nombre, IP o descripción..."
-                   class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none pl-9 text-sm">
+                   class="input input-sm w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none pl-9 text-sm">
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <i data-lucide="filter" class="w-4 h-4 text-slate-500"></i>
-            <select id="zone-filter" class="select select-sm bg-navy-950 border-navy-700 focus:border-brand text-sm min-w-[180px]">
-                <option value="">Todas las zonas</option>
-                {% for z in zones %}
-                <option value="{{ z.id }}">{{ z.name }}</option>
-                {% endfor %}
-            </select>
+            <div class="min-w-[180px]">
+                {% set _zone_filter_opts = [{"value": "", "label": "Todas las zonas"}] %}
+                {% for z in zones %}{% set _zone_filter_opts = _zone_filter_opts + [{"value": z.id, "label": z.name}] %}{% endfor %}
+                {{ select_dropdown("zone_filter", _zone_filter_opts, selected_value="", id="zone-filter", size="sm") }}
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Tabla -->
-<div class="card bg-navy-900 border border-navy-800 overflow-hidden">
+<div class="card bg-navy-900 border border-white/10 overflow-hidden">
     <div class="overflow-x-auto">
         <table class="table w-full">
             <thead>
@@ -54,7 +57,7 @@
             </thead>
             <tbody class="text-sm">
                 {% for sp in speakers %}
-                <tr class="speaker-row hover:bg-navy-850/60 border-navy-800"
+                <tr class="speaker-row hover:bg-navy-850/60 border-white/10"
                     data-search="{{ (sp.name ~ ' ' ~ sp.ip ~ ' ' ~ (sp.description or ''))|lower }}"
                     data-zones="{{ sp.zones|map(attribute='id')|list|join(',') }}">
                     <td>
@@ -81,12 +84,10 @@
                     </td>
                     <td class="text-slate-400 text-xs max-w-xs truncate">{{ sp.description or "—" }}</td>
                     <td>
-                        <span class="badge badge-sm {{ 'bg-emerald-900/60 text-emerald-300 border-emerald-700' if sp.enabled else 'bg-navy-800 text-slate-500 border-navy-700' }}">
-                            {{ 'activo' if sp.enabled else 'deshabilitado' }}
-                        </span>
+                        {{ badge('activo', 'success') if sp.enabled else badge('deshabilitado', 'neutral') }}
                     </td>
                     <td class="text-center">
-                        <span class="text-xs font-semibold text-slate-300 bg-navy-950 px-2.5 py-1 rounded-full border border-navy-700">
+                        <span class="text-xs font-semibold text-slate-300 tnum bg-navy-950 px-2.5 py-1 rounded-full border border-white/10">
                             {{ sp.volume_percent ~ '%' if sp.volume_percent is not none else "—" }}
                         </span>
                     </td>
@@ -118,7 +119,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="text-slate-500 text-sm py-6 text-center">No hay altavoces dados de alta todavía.</td></tr>
+                {{ empty_state("radio-tower", "No hay altavoces dados de alta todavía.", colspan=6) }}
                 {% endfor %}
             </tbody>
         </table>
@@ -128,23 +129,23 @@
 
 <!-- Modal: añadir altavoz -->
 <dialog id="add_speaker_modal" class="modal">
-    <div class="modal-box bg-navy-900 border border-navy-800 max-w-lg">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-lg">
         <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
             <i data-lucide="radio-tower" class="w-4 h-4 text-brand"></i> Añadir altavoz
         </h3>
         <form method="post" action="{{ url_for('speakers.create') }}" class="space-y-4">
             <div class="form-control w-full">
                 <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
-                <input name="name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                <input name="name" required class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
             </div>
             <div class="grid grid-cols-3 gap-3">
                 <div class="form-control w-full col-span-2">
                     <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
-                    <input name="ip" required placeholder="10.0.1.56" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    <input name="ip" required placeholder="10.0.1.56" class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
                 <div class="form-control w-full">
                     <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
-                    <input name="port" type="number" value="5005" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    <input name="port" type="number" value="5005" class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
             </div>
             <div class="form-control w-full">
@@ -153,7 +154,7 @@
             </div>
             <div class="form-control w-full">
                 <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Descripción / ubicación</span></label>
-                <textarea name="description" rows="2" class="textarea w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none text-sm" placeholder="Ej. Sala de control principal - Bastidor A"></textarea>
+                <textarea name="description" rows="2" class="textarea w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none text-sm" placeholder="Ej. Sala de control principal - Bastidor A"></textarea>
             </div>
             <div class="modal-action pt-2">
                 <button type="button" onclick="add_speaker_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
@@ -166,23 +167,23 @@
 
 <!-- Modal: editar altavoz (reutilizado por todas las filas) -->
 <dialog id="edit_speaker_modal" class="modal">
-    <div class="modal-box bg-navy-900 border border-navy-800 max-w-lg">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-lg">
         <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
             <i data-lucide="pencil" class="w-4 h-4 text-brand"></i> Editar altavoz
         </h3>
         <form id="edit_speaker_form" method="post" class="space-y-4">
             <div class="form-control w-full">
                 <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
-                <input name="name" id="edit_speaker_name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                <input name="name" id="edit_speaker_name" required class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
             </div>
             <div class="grid grid-cols-3 gap-3">
                 <div class="form-control w-full col-span-2">
                     <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
-                    <input name="ip" id="edit_speaker_ip" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    <input name="ip" id="edit_speaker_ip" required class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
                 <div class="form-control w-full">
                     <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
-                    <input name="port" id="edit_speaker_port" type="number" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                    <input name="port" id="edit_speaker_port" type="number" class="input w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none">
                 </div>
             </div>
             <div class="form-control w-full">
@@ -191,7 +192,7 @@
             </div>
             <div class="form-control w-full">
                 <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Descripción / ubicación</span></label>
-                <textarea name="description" id="edit_speaker_description" rows="2" class="textarea w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none text-sm"></textarea>
+                <textarea name="description" id="edit_speaker_description" rows="2" class="textarea w-full bg-navy-950 border-white/10 focus:border-brand focus:outline-none text-sm"></textarea>
             </div>
             <div class="modal-action pt-2">
                 <button type="button" onclick="edit_speaker_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>

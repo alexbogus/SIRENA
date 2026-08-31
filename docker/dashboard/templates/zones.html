@@ -1,32 +1,29 @@
 {% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% from "_page_header.html" import page_header %}
+{% from "_empty_state.html" import empty_state %}
 {% block title %}Zonas{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Zonas</h1>
-<p class="text-sm text-slate-400 mb-4">
-    Agrupaciones libres de altavoces (cocina, CECOM, garaje...). El envío manual y las reglas de alerta
-    también admiten el destino especial "Todos", que difunde a toda la base sin necesidad de una zona.
-</p>
+{{ page_header("ZONAS", "Zonas", "Agrupaciones libres de altavoces (cocina, CECOM, garaje...). El envío manual y las reglas de alerta también admiten el destino especial \"Todos\", que difunde a toda la base sin necesidad de una zona.") }}
 
-<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mb-6">
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mb-6">
     <form method="post" action="{{ url_for('zones.create') }}" class="flex gap-3 items-end">
         <div class="flex-1">
             <label class="block text-xs text-slate-400 mb-1">Nombre de la zona</label>
-            <input name="name" required class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
         </div>
-        <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">Crear</button>
+        <button class="btn-brand px-4 py-2 text-sm">Crear</button>
     </form>
 </div>
 
 <div class="space-y-2">
     {% for z in zones %}
-    <div class="bg-navy-900 border border-navy-800 rounded-xl p-3">
+    <div class="bg-navy-900 border border-white/10 rounded-xl p-3">
         <div class="flex items-center justify-between gap-3 flex-wrap">
             <form method="post" action="{{ url_for('zones.edit', zone_id=z.id) }}" class="flex items-center gap-2 flex-1 min-w-[200px]">
                 <input name="name" value="{{ z.name }}" required
-                       class="flex-1 bg-navy-800 border border-navy-700 rounded-lg px-3 py-1.5 text-sm">
-                <span class="text-xs px-2 py-0.5 rounded-full shrink-0 {{ 'bg-emerald-900/60 text-emerald-300' if z.enabled else 'bg-navy-800 text-slate-500' }}">
-                    {{ 'activa' if z.enabled else 'deshabilitada' }}
-                </span>
+                       class="flex-1 bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+                <span class="shrink-0">{{ badge('activa', 'success') if z.enabled else badge('deshabilitada', 'neutral') }}</span>
                 <button class="text-slate-300 hover:text-emerald-400 text-xs flex items-center gap-1 shrink-0">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
                 </button>
@@ -49,7 +46,7 @@
         </div>
     </div>
     {% else %}
-    <p class="text-slate-500 text-sm">No hay zonas creadas todavía.</p>
+    {{ empty_state("map-pin", "No hay zonas creadas todavía.") }}
     {% endfor %}
 </div>
 {% endblock %}

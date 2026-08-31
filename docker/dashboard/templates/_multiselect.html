@@ -9,15 +9,15 @@
 {% set selected_str = selected_values|map('string')|list %}
 <div class="relative" data-dropdown-checklist>
     <button type="button" data-dropdown-toggle-btn
-            class="w-full flex items-center justify-between gap-2 bg-navy-950 border border-navy-700 rounded-lg px-3 py-2 text-sm text-left hover:border-navy-600">
+            class="w-full flex items-center justify-between gap-2 bg-navy-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-left hover:border-navy-600">
         <span data-dropdown-label data-placeholder="{{ placeholder }}" class="truncate">{{ placeholder }}</span>
         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
     </button>
     <div data-dropdown-panel
-         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-navy-900 border border-navy-700 rounded-lg shadow-lg p-2 space-y-0.5">
+         class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-navy-900 border border-white/10 rounded-lg shadow-lg p-2 space-y-0.5">
         {% if items|length > 6 %}
         <input type="text" data-dropdown-search placeholder="Buscar..." autocomplete="off"
-               class="sticky top-0 z-10 w-full bg-navy-900 border border-navy-700 rounded-md px-2 py-1 text-xs mb-1 focus:outline-none focus:border-brand">
+               class="sticky top-0 z-10 w-full bg-navy-900 border border-white/10 rounded-md px-2 py-1 text-xs mb-1 focus:outline-none focus:border-brand">
         {% endif %}
         {% for item in items %}
         {% set value = item[value_attr] %}
