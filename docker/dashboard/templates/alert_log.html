@@ -9,30 +9,70 @@
 <table class="w-full text-sm bg-navy-900 border border-white/10 rounded-xl overflow-hidden">
     <thead class="bg-navy-900/60 text-slate-400 text-left border-b border-white/10">
         <tr>
-            <th class="px-3 py-2">Incidente</th>
-            <th class="px-3 py-2">Visto</th>
-            <th class="px-3 py-2">Categoría</th>
-            <th class="px-3 py-2">Regla</th>
-            <th class="px-3 py-2">Mensaje</th>
-            <th class="px-3 py-2">Enviado</th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="incident_id">Incidente <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="first_seen_at">Visto <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="last_raw_description">Categoría <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="rule_name">Regla <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="message_text">Mensaje <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="sent_at">Enviado <span class="sort-arrow"></span></th>
         </tr>
     </thead>
-    <tbody class="divide-y divide-white/5">
-        {% for e in entries %}
-        <tr class="hover:bg-navy-850/40">
-            <td class="px-3 py-2 font-mono text-xs tnum">{{ e.incident_id }}</td>
-            <td class="px-3 py-2 text-xs text-slate-400 tnum">{{ e.first_seen_at }}</td>
-            <td class="px-3 py-2 text-xs">{{ e.last_raw_description }}</td>
-            <td class="px-3 py-2 text-xs">
-                {% if e.rule_name %}{{ e.rule_name }}{% else %}<span class="text-slate-500">sin match</span>{% endif %}
-            </td>
-            <td class="px-3 py-2 text-xs max-w-xs truncate">{{ e.message_text or '—' }}</td>
-            <td class="px-3 py-2 text-xs text-slate-400 tnum">{{ e.sent_at or '—' }}</td>
-        </tr>
-        {% else %}
-        {{ empty_state("history", "Sin incidentes registrados todavía.", colspan=6) }}
-        {% endfor %}
-    </tbody>
+    <tbody id="alert-log-body" class="divide-y divide-white/5"></tbody>
 </table>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const allEntries = {{ entries | tojson }};
+
+// parseEsDate() y sortHistory() vienen de static/js/history-table.js
+// (compartido con dashboard.html y message_history.html).
+
+let sortState = {col: "first_seen_at", dir: "desc"};
+
+function ruleBadge(ruleName) {
+    if (ruleName) return `<span class="text-emerald-400 inline-flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i>match</span> <span class="text-slate-300">${ruleName}</span>`;
+    return `<span class="text-slate-500">sin match</span>`;
+}
+
+function render() {
+    const tbody = document.getElementById("alert-log-body");
+    const rows = sortHistory(allEntries, sortState.col, sortState.dir);
+    tbody.innerHTML = "";
+    rows.forEach(e => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-navy-850/40";
+        tr.innerHTML = `
+            <td class="px-3 py-2 font-mono text-xs tnum">${e.incident_id}</td>
+            <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">${e.first_seen_at || '—'}</td>
+            <td class="px-3 py-2 text-xs">${e.last_raw_description || '—'}</td>
+            <td class="px-3 py-2 text-xs">${ruleBadge(e.rule_name)}</td>
+            <td class="px-3 py-2 text-xs max-w-xs truncate" title="${(e.message_text || '').replace(/"/g, '&quot;')}">${e.message_text || '—'}</td>
+            <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">${e.sent_at || '—'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">Sin incidentes registrados todavía.</td></tr>`;
+    }
+    document.querySelectorAll(".sort-col").forEach(th => {
+        const arrow = th.querySelector(".sort-arrow");
+        arrow.innerHTML = th.dataset.col === sortState.col
+            ? `<i data-lucide="${sortState.dir === "asc" ? "chevron-up" : "chevron-down"}" class="w-3 h-3 inline"></i>`
+            : "";
+    });
+    lucide.createIcons();
+}
+
+document.querySelectorAll(".sort-col").forEach(th => {
+    th.addEventListener("click", () => {
+        const col = th.dataset.col;
+        sortState = {col, dir: sortState.col === col && sortState.dir === "asc" ? "desc" : "asc"};
+        render();
+    });
+});
+
+render();
+</script>
 {% endblock %}

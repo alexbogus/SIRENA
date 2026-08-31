@@ -20,6 +20,7 @@
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="source">Origen <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="text">Mensaje <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="delivery_status">Entrega <span class="sort-arrow"></span></th>
+            <th class="px-3 py-2">Acciones</th>
         </tr>
     </thead>
     <tbody id="history-body" class="divide-y divide-white/5"></tbody>
@@ -61,11 +62,20 @@ function render() {
             <td class="px-3 py-2 text-xs text-slate-400">${e.source}</td>
             <td class="px-3 py-2 text-xs max-w-md truncate" title="${e.text.replace(/"/g, '&quot;')}">${e.text}</td>
             <td class="px-3 py-2 text-xs">${deliveryBadge(e.delivery_status)}</td>
+            <td class="px-3 py-2 text-xs">
+                <form method="post" action="/speakers/${e.speaker_id}/clear-logs"
+                      data-confirm="¿Borrar todos los logs de ${e.speaker_name}? Esta acción no se puede deshacer."
+                      data-confirm-variant="danger">
+                    <button type="submit" class="text-slate-500 hover:text-red-400" title="Borrar logs de ${e.speaker_name}">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+            </td>
         `;
         tbody.appendChild(tr);
     });
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">Sin mensajes que coincidan con la búsqueda.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">Sin mensajes que coincidan con la búsqueda.</td></tr>`;
     }
     document.querySelectorAll(".sort-col").forEach(th => {
         const arrow = th.querySelector(".sort-arrow");

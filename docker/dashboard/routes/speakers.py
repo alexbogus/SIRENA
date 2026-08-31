@@ -1,8 +1,9 @@
-import requests
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 import config
 import models.audit as audit_model
+import models.messages as messages_model
+import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
 import models.zones as zones_model
 from routes.auth import login_required
@@ -71,14 +72,10 @@ def set_volume(speaker_id: int):
         return jsonify({"ok": False, "error": "volume_percent inválido"}), 400
     volume_percent = max(0, min(100, volume_percent))
 
-    try:
-        resp = requests.post(f"http://{sp['ip']}/volume", json={"volume_percent": volume_percent}, timeout=3)
-        resp.raise_for_status()
-    except Exception as exc:
-        logger.warning(f"No se pudo fijar el volumen de {sp['name']!r} ({sp['ip']}): {exc}")
+    if not speakers_model.push_volume(sp, volume_percent):
+        logger.warning(f"No se pudo fijar el volumen de {sp['name']!r} ({sp['ip']})")
         return jsonify({"ok": False, "error": "El altavoz no responde"}), 502
 
-    speakers_model.set_volume(speaker_id, volume_percent)
     return jsonify({"ok": True, "volume_percent": volume_percent})
 
 
@@ -96,6 +93,23 @@ def toggle(speaker_id: int):
                         "habilitado" if new_enabled else "deshabilitado")
     flash(f"Altavoz {'habilitado' if new_enabled else 'deshabilitado'}.", "success")
     return redirect(url_for("speakers.index"))
+
+
+@bp.route("/<int:speaker_id>/clear-logs", methods=["POST"])
+@login_required
+def clear_logs(speaker_id: int):
+    sp = speakers_model.get(speaker_id)
+    if not sp:
+        flash("El altavoz ya no existe.", "error")
+        return redirect(request.referrer or url_for("dashboard.index"))
+    n_messages = messages_model.delete_for_speaker(speaker_id)
+    n_errors = speaker_errors_model.delete_for_speaker(speaker_id)
+    logger.info(f"Logs de {sp['name']!r} (altavoz {speaker_id}) borrados: "
+                f"{n_messages} mensajes, {n_errors} errores")
+    audit_model.record("speaker", "logs_cleared", sp["name"],
+                        f"mensajes={n_messages} errores={n_errors}")
+    flash(f"Logs de {sp['name']!r} borrados.", "success")
+    return redirect(request.referrer or url_for("dashboard.index"))
 
 
 @bp.route("/<int:speaker_id>/delete", methods=["POST"])

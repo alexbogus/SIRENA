@@ -21,7 +21,8 @@ function sortHistory(entries, col, dir) {
     const sorted = [...entries];
     sorted.sort((a, b) => {
         let av = a[col], bv = b[col];
-        if (col === "sent_at") { av = parseEsDate(av); bv = parseEsDate(bv); }
+        if (col.endsWith("_at")) { av = parseEsDate(av); bv = parseEsDate(bv); }
+        else if (typeof av === "number" || typeof bv === "number") { av = av || 0; bv = bv || 0; }
         else { av = (av || "").toLowerCase(); bv = (bv || "").toLowerCase(); }
         if (av < bv) return dir === "asc" ? -1 : 1;
         if (av > bv) return dir === "asc" ? 1 : -1;

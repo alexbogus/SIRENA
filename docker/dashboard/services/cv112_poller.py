@@ -34,8 +34,7 @@ _HEADERS = {
 
 def poll_once(scheduler=None) -> None:
     correlation_id = config.new_correlation_id()
-    now_iso = datetime.datetime.now().isoformat(timespec="seconds")
-    now_sql = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_sql = config.now_sql()
 
     try:
         resp = requests.get(config.CV112_FEED_URL, headers=_HEADERS, timeout=10)
@@ -54,7 +53,7 @@ def poll_once(scheduler=None) -> None:
     logger.info(f"Feed descargado: {len(features)} incidentes activos", extra={"correlation_id": correlation_id})
 
     for feature in features:
-        _process_feature(feature, now_iso, correlation_id, scheduler)
+        _process_feature(feature, now_sql, correlation_id, scheduler)
 
 
 def _check_taxonomy_novelty(raw_description: str, municipio: str, correlation_id: str) -> None:
@@ -72,7 +71,7 @@ def _check_taxonomy_novelty(raw_description: str, municipio: str, correlation_id
         taxonomy_model.remember_municipio(municipio)
 
 
-def _process_feature(feature: dict, now_iso: str, correlation_id: str, scheduler) -> None:
+def _process_feature(feature: dict, now_sql: str, correlation_id: str, scheduler) -> None:
     props = feature.get("properties", {})
     incident_id = props.get("id")
     if incident_id is None:
@@ -96,7 +95,7 @@ def _process_feature(feature: dict, now_iso: str, correlation_id: str, scheduler
     if record is not None and record["last_raw_description"] == raw_description:
         return  # ya evaluado con esta misma categoría, no hace falta repetir
 
-    incidents_model.upsert_seen(incident_id, raw_description, municipio, now_iso)
+    incidents_model.upsert_seen(incident_id, raw_description, municipio, now_sql)
 
     if not settings_model.auto_alerts_enabled():
         logger.info(

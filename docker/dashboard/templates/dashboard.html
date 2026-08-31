@@ -103,7 +103,14 @@
 
         <!-- Mensajes recientes -->
         <div class="space-y-2">
-            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Mensajes recientes</div>
+            <div class="flex items-center justify-between gap-2">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Mensajes recientes</div>
+                <form method="post" class="clear-logs-form">
+                    <button type="submit" class="text-xs text-slate-500 hover:text-red-400 inline-flex items-center gap-1" title="Borrar logs de este altavoz">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar logs
+                    </button>
+                </form>
+            </div>
             <div class="sent-block hidden border border-red-900/60 bg-red-950/20 rounded-lg px-3 py-2">
                 <div class="flex items-center justify-between gap-2 mb-1">
                     <span class="text-xs text-slate-400">Último mensaje enviado</span>
@@ -241,6 +248,11 @@ function renderSpeakers(speakers) {
         node.querySelector(".volume-apply-btn").dataset.speakerId = sp.id;
 
         node.querySelector(".uptime").textContent = fmtUptime(sp.uptime_seconds);
+
+        const clearLogsForm = node.querySelector(".clear-logs-form");
+        clearLogsForm.action = `/speakers/${sp.id}/clear-logs`;
+        clearLogsForm.dataset.confirm = `¿Borrar todos los logs de ${sp.name}? Esta acción no se puede deshacer.`;
+        clearLogsForm.dataset.confirmVariant = "danger";
 
         const dot = node.querySelector(".dot");
         const stateBadge = node.querySelector(".state");

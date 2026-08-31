@@ -2,6 +2,7 @@
 anunciado-todavía / ya-anunciado (estado terminal). Ver Fase 5 del plan --
 un incidente puede cambiar de categoría mientras sigue abierto sin cambiar
 de id, así que "no anunciado todavía" se re-evalúa en cada poll."""
+import config
 from db import db_cursor
 
 
@@ -55,7 +56,11 @@ def recent_log(limit: int = 200) -> list[dict]:
             """,
             (limit,),
         ).fetchall()
-    return [dict(r) for r in rows]
+    entries = [dict(r) for r in rows]
+    for e in entries:
+        e["first_seen_at"] = config.format_timestamp_es(e["first_seen_at"])
+        e["sent_at"] = config.format_timestamp_es(e["sent_at"])
+    return entries
 
 
 def purge_older_than(cutoff_iso: str) -> int:

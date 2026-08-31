@@ -1,3 +1,5 @@
+import requests
+
 from db import db_cursor
 
 
@@ -110,6 +112,17 @@ def resolve_targets(
             zone_ids,
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def push_volume(speaker: dict, volume_percent: int) -> bool:
+    """Envía el volumen al firmware del altavoz y lo persiste si responde. Devuelve éxito."""
+    try:
+        resp = requests.post(f"http://{speaker['ip']}/volume", json={"volume_percent": volume_percent}, timeout=3)
+        resp.raise_for_status()
+    except Exception:
+        return False
+    set_volume(speaker["id"], volume_percent)
+    return True
 
 
 def set_volume(speaker_id: int, volume_percent: int) -> None:

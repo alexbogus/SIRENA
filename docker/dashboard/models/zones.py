@@ -40,3 +40,19 @@ def set_enabled(zone_id: int, enabled: bool) -> None:
 def delete(zone_id: int) -> None:
     with db_cursor() as cur:
         cur.execute("DELETE FROM zones WHERE id = ?", (zone_id,))
+
+
+def speakers_for_zone(zone_id: int) -> list[dict]:
+    with db_cursor() as cur:
+        rows = cur.execute(
+            """
+            SELECT s.*, ss.volume_percent
+            FROM speakers s
+            JOIN speaker_zones sz ON sz.speaker_id = s.id
+            LEFT JOIN speaker_status ss ON ss.speaker_id = s.id
+            WHERE sz.zone_id = ?
+            ORDER BY s.name COLLATE NOCASE
+            """,
+            (zone_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]

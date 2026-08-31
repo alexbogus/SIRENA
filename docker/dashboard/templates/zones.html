@@ -4,42 +4,55 @@
 {% from "_empty_state.html" import empty_state %}
 {% block title %}Zonas{% endblock %}
 {% block content %}
-{{ page_header("ZONAS", "Zonas", "Agrupaciones libres de altavoces (cocina, CECOM, garaje...). El envío manual y las reglas de alerta también admiten el destino especial \"Todos\", que difunde a toda la base sin necesidad de una zona.") }}
-
-<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mb-6">
-    <form method="post" action="{{ url_for('zones.create') }}" class="flex gap-3 items-end">
-        <div class="flex-1">
-            <label class="block text-xs text-slate-400 mb-1">Nombre de la zona</label>
-            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
-        </div>
-        <button class="btn-brand px-4 py-2 text-sm">Crear</button>
-    </form>
+<div class="flex items-start justify-between gap-4 mb-4">
+    <div class="flex-1">
+        {{ page_header("ZONAS", "Zonas", "Agrupaciones libres de altavoces (cocina, CECOM, garaje...). El envío manual y las reglas de alerta también admiten el destino especial \"Todos\", que difunde a toda la base sin necesidad de una zona.") }}
+    </div>
+    <button type="button" onclick="add_zone_modal.showModal()"
+            class="flex items-center gap-1.5 text-sm btn bg-brand hover:bg-brand-dark text-white border-0 px-3 py-1.5 h-auto min-h-0 shrink-0">
+        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Añadir zona
+    </button>
 </div>
 
-<div class="space-y-2">
+<div class="bg-navy-900 border border-white/10 rounded-xl divide-y divide-white/5">
     {% for z in zones %}
-    <div class="bg-navy-900 border border-white/10 rounded-xl p-3">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-            <form method="post" action="{{ url_for('zones.edit', zone_id=z.id) }}" class="flex items-center gap-2 flex-1 min-w-[200px]">
-                <input name="name" value="{{ z.name }}" required
-                       class="flex-1 bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
-                <span class="shrink-0">{{ badge('activa', 'success') if z.enabled else badge('deshabilitada', 'neutral') }}</span>
-                <button class="text-slate-300 hover:text-emerald-400 text-xs flex items-center gap-1 shrink-0">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
+    <div class="flex items-center justify-between gap-4 px-4 py-2.5 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="font-medium shrink-0">{{ z.name }}</span>
+            {{ badge('activa', 'success') if z.enabled else badge('deshabilitada', 'neutral') }}
+            <span class="text-xs text-slate-500 shrink-0">
+                {{ z.speakers|length }} altavoz{{ 'ces' if z.speakers|length != 1 else '' }}
+            </span>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            {% if z.speakers %}
+            <form method="post" action="{{ url_for('zones.volume', zone_id=z.id) }}" class="flex items-center gap-1.5">
+                <label class="text-xs text-slate-400">Volumen</label>
+                <input type="number" name="volume_percent" min="0" max="100" step="5" value="{{ z.default_volume }}"
+                       class="w-16 bg-navy-800 border border-white/10 rounded-lg px-2 py-1 text-sm">
+                <span class="text-xs text-slate-400">%</span>
+                <button class="btn btn-sm btn-ghost text-slate-300 hover:text-white" title="Aplicar a todos los altavoces de la zona">
+                    Aplicar
                 </button>
             </form>
-            <div class="flex items-center gap-3 shrink-0">
+            {% else %}
+            <span class="text-xs text-slate-600 italic">Sin altavoces asignados</span>
+            {% endif %}
+            <div class="flex items-center gap-1 shrink-0">
+                <button type="button" class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-white" title="Editar"
+                        onclick="edit_zone_modal_{{ z.id }}.showModal()">
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
                 <form method="post" action="{{ url_for('zones.toggle', zone_id=z.id) }}"
                       data-confirm="¿{{ 'Deshabilitar' if z.enabled else 'Habilitar' }} la zona {{ z.name }}?">
-                    <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
-                        <i data-lucide="{{ 'pause-circle' if z.enabled else 'play-circle' }}" class="w-3.5 h-3.5"></i>
-                        {{ 'Deshabilitar' if z.enabled else 'Habilitar' }}
+                    <button class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-amber-400" title="{{ 'Deshabilitar' if z.enabled else 'Habilitar' }}">
+                        <i data-lucide="{{ 'pause-circle' if z.enabled else 'play-circle' }}" class="w-4 h-4"></i>
                     </button>
                 </form>
                 <form method="post" action="{{ url_for('zones.delete', zone_id=z.id) }}"
                       data-confirm="¿Eliminar la zona {{ z.name }}?" data-confirm-variant="danger">
-                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                    <button class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-red-400" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </form>
             </div>
@@ -49,4 +62,34 @@
     {{ empty_state("map-pin", "No hay zonas creadas todavía.") }}
     {% endfor %}
 </div>
+
+<!-- Modal: añadir zona -->
+<dialog id="add_zone_modal" class="modal">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-lg">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+            <i data-lucide="map-pin" class="w-4 h-4 text-brand"></i> Añadir zona
+        </h3>
+        {% include "_zone_form.html" %}
+        <div class="modal-action pt-2 -mt-2">
+            <button type="button" onclick="add_zone_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+
+<!-- Modales: editar zona (uno por zona) -->
+{% for z in zones %}
+<dialog id="edit_zone_modal_{{ z.id }}" class="modal">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-lg">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+            <i data-lucide="pencil" class="w-4 h-4 text-brand"></i> Editar zona
+        </h3>
+        {% include "_zone_form.html" with context %}
+        <div class="modal-action pt-2 -mt-2">
+            <button type="button" onclick="edit_zone_modal_{{ z.id }}.close()" class="btn btn-sm btn-ghost">Cancelar</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+{% endfor %}
 {% endblock %}

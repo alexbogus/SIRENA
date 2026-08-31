@@ -132,7 +132,7 @@ def full_history() -> list[dict]:
         rows = cur.execute(
             """
             SELECT m.sent_at, m.source, m.target_label, m.text,
-                   s.name AS speaker_name, mt.delivery_status
+                   mt.speaker_id, s.name AS speaker_name, mt.delivery_status
             FROM message_targets mt
             JOIN messages m ON m.id = mt.message_id
             JOIN speakers s ON s.id = mt.speaker_id
@@ -143,6 +143,7 @@ def full_history() -> list[dict]:
         {
             "sent_at": config.format_timestamp_es(r["sent_at"]),
             "source": r["source"],
+            "speaker_id": r["speaker_id"],
             "speaker_name": r["speaker_name"],
             "target_label": r["target_label"] or "—",
             "text": r["text"],
@@ -156,3 +157,12 @@ def purge_older_than(cutoff_iso: str) -> int:
     with db_cursor() as cur:
         cur.execute("DELETE FROM messages WHERE sent_at < ?", (cutoff_iso,))
         return cur.rowcount  # message_targets se borra en cascada (ON DELETE CASCADE)
+
+
+def delete_for_speaker(speaker_id: int) -> int:
+    """Borra el histórico de mensajes de un altavoz concreto. Solo se
+    elimina la fila de message_targets de ese altavoz: si el mensaje se
+    envió también a otros altavoces/zonas, sigue existiendo para ellos."""
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM message_targets WHERE speaker_id = ?", (speaker_id,))
+        return cur.rowcount

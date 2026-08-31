@@ -37,3 +37,9 @@ def purge_older_than(cutoff_iso: str) -> int:
     with db_cursor() as cur:
         cur.execute("DELETE FROM speaker_error_log WHERE occurred_at < ?", (cutoff_iso,))
         return cur.rowcount
+
+
+def delete_for_speaker(speaker_id: int) -> int:
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM speaker_error_log WHERE speaker_id = ?", (speaker_id,))
+        return cur.rowcount
