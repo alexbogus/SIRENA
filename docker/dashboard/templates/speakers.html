@@ -2,91 +2,248 @@
 {% from "_multiselect.html" import multiselect %}
 {% block title %}Altavoces{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-2xl font-semibold">Altavoces</h1>
-        <p class="text-sm text-slate-400 mt-0.5">{{ speakers|length }} registrados</p>
-    </div>
-</div>
 {% set _zns = namespace(items=[]) %}
 {% for z in zones %}{% set _zns.items = _zns.items + [{"id": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
 
-<div class="grid lg:grid-cols-[380px_1fr] gap-5 items-start">
-
-    <div class="card bg-navy-900 border border-navy-800">
-        <div class="card-body">
-            <div class="flex justify-center mb-2">
-                <div class="w-24 h-24 rounded-2xl bg-navy-950 border border-navy-700 flex items-center justify-center overflow-hidden">
-                    <img src="{{ url_for('static', filename='images/speaker-model.png') }}" class="w-16 h-16 object-contain" alt="Altavoz IP">
-                </div>
-            </div>
-            <h2 class="card-title text-base"><i data-lucide="plus-circle" class="w-4 h-4 text-brand"></i> Añadir altavoz</h2>
-            <form method="post" action="{{ url_for('speakers.create') }}" class="space-y-4">
-                <div class="form-control w-full">
-                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
-                    <input name="name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
-                        <input name="ip" required placeholder="10.0.1.56" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
-                        <input name="port" type="number" value="5005" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                    </div>
-                </div>
-                <div class="form-control w-full">
-                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Zonas</span></label>
-                    {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
-                </div>
-                <button class="btn btn-primary btn-block">Añadir altavoz</button>
-            </form>
-        </div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-2xl font-semibold flex items-center gap-3">
+            Altavoces
+            <span class="badge bg-navy-800 text-slate-400 border-navy-700 text-xs font-medium">{{ speakers|length }} registrados</span>
+        </h1>
+        <p class="text-sm text-slate-400 mt-0.5">Administración, asignación de zonas y estado de la red de megafonía.</p>
     </div>
+    <button type="button" onclick="add_speaker_modal.showModal()" class="btn bg-brand hover:bg-brand-dark text-white border-0 gap-2">
+        <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir altavoz
+    </button>
+</div>
 
-    <div class="space-y-3">
-        {% for sp in speakers %}
-        <div class="card bg-navy-900 border border-navy-800">
-            <div class="card-body p-4">
-                <div class="flex items-center gap-3 mb-1">
-                    <div class="w-9 h-9 rounded-lg bg-navy-800 flex items-center justify-center shrink-0">
-                        <i data-lucide="radio-tower" class="w-4 h-4 text-brand-soft"></i>
-                    </div>
-                    <span class="font-medium text-sm">{{ sp.name }}</span>
-                </div>
-                <form method="post" action="{{ url_for('speakers.edit', speaker_id=sp.id) }}" class="grid sm:grid-cols-5 gap-3 items-end">
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Nombre</span></label>
-                        <input name="name" value="{{ sp.name }}" required class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">IP</span></label>
-                        <input name="ip" value="{{ sp.ip }}" required class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Puerto</span></label>
-                        <input name="port" type="number" value="{{ sp.port }}" class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label py-0 mb-1"><span class="label-text text-xs text-slate-400">Zonas</span></label>
-                        {{ multiselect("zone_ids", _zns.items, sp.zones|map(attribute='id')|list, "Sin zonas", value_attr="id", label_attr="label") }}
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn btn-sm bg-navy-800 hover:bg-navy-700 border-0">Guardar</button>
-                    </div>
-                </form>
-                <form method="post" action="{{ url_for('speakers.delete', speaker_id=sp.id) }}" class="mt-2"
-                      data-confirm="¿Eliminar el altavoz {{ sp.name }}?" data-confirm-variant="danger">
-                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-                    </button>
-                </form>
-            </div>
+<!-- Filtros -->
+<div class="card bg-navy-900 border border-navy-800 mb-5">
+    <div class="card-body p-4 flex-row flex-wrap items-center gap-4">
+        <div class="relative flex-1 min-w-[220px]">
+            <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="speaker-search" placeholder="Buscar por nombre, IP o descripción..."
+                   class="input input-sm w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none pl-9 text-sm">
         </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">No hay altavoces dados de alta todavía.</p>
-        {% endfor %}
+        <div class="flex items-center gap-2 shrink-0">
+            <i data-lucide="filter" class="w-4 h-4 text-slate-500"></i>
+            <select id="zone-filter" class="select select-sm bg-navy-950 border-navy-700 focus:border-brand text-sm min-w-[180px]">
+                <option value="">Todas las zonas</option>
+                {% for z in zones %}
+                <option value="{{ z.id }}">{{ z.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 </div>
+
+<!-- Tabla -->
+<div class="card bg-navy-900 border border-navy-800 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
+                <tr class="bg-navy-950/60 text-slate-400 text-xs uppercase tracking-wide">
+                    <th class="font-semibold">Dispositivo</th>
+                    <th class="font-semibold">Zonas</th>
+                    <th class="font-semibold">Descripción</th>
+                    <th class="font-semibold">Estado</th>
+                    <th class="font-semibold text-center">Volumen</th>
+                    <th class="font-semibold text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                {% for sp in speakers %}
+                <tr class="speaker-row hover:bg-navy-850/60 border-navy-800"
+                    data-search="{{ (sp.name ~ ' ' ~ sp.ip ~ ' ' ~ (sp.description or ''))|lower }}"
+                    data-zones="{{ sp.zones|map(attribute='id')|list|join(',') }}">
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-navy-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="radio-tower" class="w-4 h-4 text-brand-soft"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-slate-100">{{ sp.name }}</div>
+                                <span class="text-xs text-slate-500 font-mono">{{ sp.ip }}:{{ sp.port }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex flex-wrap gap-1">
+                            {% for z in sp.zones %}
+                            <span class="badge badge-sm bg-brand/10 text-brand-soft border-brand/30 font-medium gap-1">
+                                <i data-lucide="map-pin" class="w-2.5 h-2.5"></i> {{ z.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-500">Sin zonas</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="text-slate-400 text-xs max-w-xs truncate">{{ sp.description or "—" }}</td>
+                    <td>
+                        <span class="badge badge-sm {{ 'bg-emerald-900/60 text-emerald-300 border-emerald-700' if sp.enabled else 'bg-navy-800 text-slate-500 border-navy-700' }}">
+                            {{ 'activo' if sp.enabled else 'deshabilitado' }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="text-xs font-semibold text-slate-300 bg-navy-950 px-2.5 py-1 rounded-full border border-navy-700">
+                            {{ sp.volume_percent ~ '%' if sp.volume_percent is not none else "—" }}
+                        </span>
+                    </td>
+                    <td class="text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <button type="button" class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-white" title="Editar"
+                                    onclick="openEditSpeakerModal(this)"
+                                    data-id="{{ sp.id }}"
+                                    data-name="{{ sp.name }}"
+                                    data-ip="{{ sp.ip }}"
+                                    data-port="{{ sp.port }}"
+                                    data-description="{{ sp.description or '' }}"
+                                    data-zone-ids="{{ sp.zones|map(attribute='id')|list|join(',') }}">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <form method="post" action="{{ url_for('speakers.toggle', speaker_id=sp.id) }}"
+                                  data-confirm="¿{{ 'Deshabilitar' if sp.enabled else 'Habilitar' }} el altavoz {{ sp.name }}?">
+                                <button class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-amber-400" title="{{ 'Deshabilitar' if sp.enabled else 'Habilitar' }}">
+                                    <i data-lucide="{{ 'pause-circle' if sp.enabled else 'play-circle' }}" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="{{ url_for('speakers.delete', speaker_id=sp.id) }}"
+                                  data-confirm="¿Eliminar el altavoz {{ sp.name }}?" data-confirm-variant="danger">
+                                <button class="btn btn-sm btn-square btn-ghost text-slate-400 hover:text-red-400" title="Eliminar">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-slate-500 text-sm py-6 text-center">No hay altavoces dados de alta todavía.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p id="speaker-empty-filter" class="hidden text-slate-500 text-sm py-6 text-center">Ningún altavoz coincide con el filtro.</p>
+</div>
+
+<!-- Modal: añadir altavoz -->
+<dialog id="add_speaker_modal" class="modal">
+    <div class="modal-box bg-navy-900 border border-navy-800 max-w-lg">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+            <i data-lucide="radio-tower" class="w-4 h-4 text-brand"></i> Añadir altavoz
+        </h3>
+        <form method="post" action="{{ url_for('speakers.create') }}" class="space-y-4">
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
+                <input name="name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="form-control w-full col-span-2">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
+                    <input name="ip" required placeholder="10.0.1.56" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
+                    <input name="port" type="number" value="5005" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+            </div>
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Zonas</span></label>
+                {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
+            </div>
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Descripción / ubicación</span></label>
+                <textarea name="description" rows="2" class="textarea w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none text-sm" placeholder="Ej. Sala de control principal - Bastidor A"></textarea>
+            </div>
+            <div class="modal-action pt-2">
+                <button type="button" onclick="add_speaker_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
+                <button class="btn btn-sm bg-brand hover:bg-brand-dark text-white border-0">Añadir altavoz</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+
+<!-- Modal: editar altavoz (reutilizado por todas las filas) -->
+<dialog id="edit_speaker_modal" class="modal">
+    <div class="modal-box bg-navy-900 border border-navy-800 max-w-lg">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+            <i data-lucide="pencil" class="w-4 h-4 text-brand"></i> Editar altavoz
+        </h3>
+        <form id="edit_speaker_form" method="post" class="space-y-4">
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Nombre</span></label>
+                <input name="name" id="edit_speaker_name" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="form-control w-full col-span-2">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">IP</span></label>
+                    <input name="ip" id="edit_speaker_ip" required class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+                <div class="form-control w-full">
+                    <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Puerto</span></label>
+                    <input name="port" id="edit_speaker_port" type="number" class="input w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none">
+                </div>
+            </div>
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Zonas</span></label>
+                {{ multiselect("zone_ids", _zns.items, [], "Sin zonas", value_attr="id", label_attr="label") }}
+            </div>
+            <div class="form-control w-full">
+                <label class="label py-0 mb-2"><span class="label-text text-xs font-semibold text-slate-400 uppercase tracking-wide">Descripción / ubicación</span></label>
+                <textarea name="description" id="edit_speaker_description" rows="2" class="textarea w-full bg-navy-950 border-navy-700 focus:border-brand focus:outline-none text-sm"></textarea>
+            </div>
+            <div class="modal-action pt-2">
+                <button type="button" onclick="edit_speaker_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
+                <button class="btn btn-sm bg-brand hover:bg-brand-dark text-white border-0">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditSpeakerModal(btn) {
+    const d = btn.dataset;
+    const form = document.getElementById("edit_speaker_form");
+    form.action = "{{ url_for('speakers.edit', speaker_id=0) }}".replace("/0/", "/" + d.id + "/");
+    document.getElementById("edit_speaker_name").value = d.name;
+    document.getElementById("edit_speaker_ip").value = d.ip;
+    document.getElementById("edit_speaker_port").value = d.port;
+    document.getElementById("edit_speaker_description").value = d.description;
+    const selectedZoneIds = d.zoneIds ? d.zoneIds.split(",") : [];
+    form.querySelectorAll('input[name="zone_ids"]').forEach((cb) => {
+        cb.checked = selectedZoneIds.includes(cb.value);
+        cb.dispatchEvent(new Event("change"));
+    });
+    edit_speaker_modal.showModal();
+}
+
+(function () {
+    const search = document.getElementById("speaker-search");
+    const zoneFilter = document.getElementById("zone-filter");
+    const rows = Array.from(document.querySelectorAll(".speaker-row"));
+    const emptyMsg = document.getElementById("speaker-empty-filter");
+    const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    function applyFilters() {
+        const q = normalize(search.value.trim());
+        const zone = zoneFilter.value;
+        let visible = 0;
+        rows.forEach((row) => {
+            const matchesSearch = q.length === 0 || normalize(row.dataset.search).includes(q);
+            const matchesZone = !zone || row.dataset.zones.split(",").includes(zone);
+            const show = matchesSearch && matchesZone;
+            row.classList.toggle("hidden", !show);
+            if (show) visible += 1;
+        });
+        emptyMsg.classList.toggle("hidden", rows.length === 0 || visible !== 0);
+    }
+
+    search.addEventListener("input", applyFilters);
+    zoneFilter.addEventListener("change", applyFilters);
+})();
+</script>
 {% endblock %}

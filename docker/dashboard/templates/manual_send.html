@@ -1,66 +1,239 @@
 {% extends "base.html" %}
+{% from "_multiselect.html" import multiselect %}
 {% block title %}Enviar mensaje{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Enviar mensaje manual</h1>
+{% set _zone_items = [] %}
+{% for z in zones %}{% set _zone_items = _zone_items + [{"id": z.id, "label": z.name}] %}{% endfor %}
+{% set _speaker_items = [] %}
+{% for sp in speakers if sp.enabled %}{% set _speaker_items = _speaker_items + [{"id": sp.id, "label": sp.name}] %}{% endfor %}
 
-<form method="post" action="{{ url_for('manual_send.send') }}" class="bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-4 max-w-2xl">
-    <div>
-        <label class="block text-sm text-slate-400 mb-1">Texto a leer</label>
-        <textarea name="text" id="text-input" rows="4" required
-                  class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2"
-                  placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
+<div class="mb-6">
+    <h1 class="text-2xl font-semibold">Enviar mensaje manual</h1>
+    <p class="text-sm text-slate-400 mt-0.5">Escribe o selecciona una plantilla, elige el destino y emite por megafonía.</p>
+</div>
+
+<form method="post" action="{{ url_for('manual_send.send') }}" id="send-form" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Columna izquierda: texto + plantillas -->
+    <div class="lg:col-span-7 space-y-6">
+
+        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-medium flex items-center gap-2">
+                    <i data-lucide="pen-line" class="w-4 h-4 text-brand"></i> Texto del mensaje
+                </h2>
+                <span class="text-xs text-slate-500 font-mono" id="char-count">0 caracteres</span>
+            </div>
+
+            <textarea name="text" id="text-input" rows="5" required
+                      class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Atención, simulacro de evacuación en 5 minutos..."></textarea>
+
+            <div class="bg-navy-950/60 border border-navy-800 rounded-lg p-3 space-y-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button type="button" id="preview-btn"
+                            class="bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                        <i data-lucide="play-circle" class="w-4 h-4"></i>
+                        <span id="preview-btn-label">Escuchar preview</span>
+                    </button>
+                    <span id="preview-error" class="text-xs text-red-400 hidden"></span>
+                </div>
+                <audio id="preview-player" controls class="w-full hidden"></audio>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Tono de preámbulo</label>
+                        <select name="tone_id" id="tone-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
+                            <option value="">Por defecto</option>
+                            {% for t in tones %}
+                            <option value="{{ t.id }}">{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Voz (solo preview)</label>
+                        <select id="voice-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
+                            <option value="">Por defecto</option>
+                            {% for v in tts_voices %}
+                            {% set value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
+                            <option value="{{ value }}">{{ v.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Repeticiones (solo preview)</label>
+                        <select id="repeats-select" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-2 py-1.5 text-xs">
+                            <option value="1">1 vez</option>
+                            <option value="2">2 veces</option>
+                            <option value="3">3 veces</option>
+                            <option value="5">5 veces</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">
+                    La voz y las repeticiones solo afectan a esta escucha de prueba (pruebas de sonido/nivel).
+                    El tono sí se aplica también al aviso real enviado a los altavoces.
+                </p>
+            </div>
+        </div>
+
+        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-3">
+            <h2 class="font-medium flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <i data-lucide="zap" class="w-4 h-4 text-brand"></i> Plantillas rápidas
+                </span>
+                <a href="{{ url_for('settings.index') }}" class="text-xs text-slate-500 hover:text-slate-300">Gestionar</a>
+            </h2>
+            <div class="space-y-2">
+                {% for t in templates %}
+                <button type="button" onclick="applyTemplate({{ t.text|tojson }})"
+                        class="w-full text-left p-2.5 rounded-lg bg-navy-800/60 hover:bg-navy-800 border border-navy-800 hover:border-navy-700 transition-all group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-slate-200 group-hover:text-brand-soft">{{ t.name }}</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400"></i>
+                    </div>
+                    <p class="text-xs text-slate-500 truncate mt-0.5">{{ t.text }}</p>
+                </button>
+                {% else %}
+                <p class="text-sm text-slate-500">
+                    No hay plantillas creadas todavía. Se gestionan desde
+                    <a href="{{ url_for('settings.index') }}" class="text-brand-soft hover:underline">Configuración</a>.
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 
-    <div class="flex items-center gap-3 flex-wrap">
-        <button type="button" id="preview-btn"
-                class="bg-navy-800 hover:bg-navy-700 border border-navy-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
-            <i data-lucide="play-circle" class="w-4 h-4"></i>
-            <span id="preview-btn-label">Escuchar preview</span>
-        </button>
-        <span id="preview-error" class="text-xs text-red-400 hidden"></span>
-    </div>
-    <audio id="preview-player" controls class="w-full hidden"></audio>
+    <!-- Columna derecha: destino + envío -->
+    <div class="lg:col-span-5 space-y-6">
 
-    <div>
-        <label class="block text-sm text-slate-400 mb-2">Destino</label>
-        <label class="flex items-center gap-2 mb-2">
-            <input type="radio" name="target" value="all" checked id="target-all"> Todos los altavoces
-        </label>
-        <label class="flex items-center gap-2 mb-2">
-            <input type="radio" name="target" value="zones" id="target-zones"> Zonas concretas
-        </label>
-        <div id="zone-picker" class="ml-6 grid grid-cols-2 gap-2 opacity-50 pointer-events-none">
-            {% for z in zones %}
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="zone_ids" value="{{ z.id }}"> {{ z.name }}
+        <div class="card bg-navy-900 border border-navy-800 rounded-xl p-5 space-y-3">
+            <h2 class="font-medium flex items-center gap-2 border-b border-navy-800 pb-3">
+                <i data-lucide="megaphone" class="w-4 h-4 text-brand"></i> Destino
+            </h2>
+
+            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+                <div class="flex items-center gap-3">
+                    <input type="radio" name="target" value="all" id="target-all" checked>
+                    <div>
+                        <div class="text-sm font-medium text-slate-200">Todas las zonas</div>
+                        <div class="text-xs text-slate-500">Emisión global a todos los altavoces habilitados</div>
+                    </div>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand-soft border border-brand/30">{{ speakers|selectattr('enabled')|list|length }} altavoces</span>
             </label>
-            {% endfor %}
+
+            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+                <div class="flex items-center gap-3">
+                    <input type="radio" name="target" value="zones" id="target-zones">
+                    <div>
+                        <div class="text-sm font-medium text-slate-200">Zonas concretas</div>
+                        <div class="text-xs text-slate-500">Seleccionar una o varias zonas</div>
+                    </div>
+                </div>
+                <i data-lucide="map-pin" class="w-4 h-4 text-slate-500"></i>
+            </label>
+
+            <div id="zone-picker" class="hidden pl-3 border-l-2 border-navy-800">
+                {{ multiselect("zone_ids", _zone_items, [], "Sin zonas seleccionadas", value_attr="id", label_attr="label") }}
+            </div>
+
+            <label class="flex items-center justify-between p-3 rounded-lg border border-navy-800 bg-navy-950/60 hover:border-navy-700 cursor-pointer transition-colors">
+                <div class="flex items-center gap-3">
+                    <input type="radio" name="target" value="speakers" id="target-speakers">
+                    <div>
+                        <div class="text-sm font-medium text-slate-200">Altavoces individuales</div>
+                        <div class="text-xs text-slate-500">Ideal para pruebas puntuales</div>
+                    </div>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300">Pruebas</span>
+            </label>
+
+            <div id="speaker-picker" class="hidden pl-3 border-l-2 border-navy-800">
+                {{ multiselect("speaker_ids", _speaker_items, [], "Sin altavoces seleccionados", value_attr="id", label_attr="label") }}
+            </div>
+        </div>
+
+        <button type="button" onclick="openConfirm()"
+                class="w-full bg-brand hover:bg-brand-dark rounded-lg px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i> Emitir mensaje
+        </button>
+
+    </div>
+</form>
+
+<!-- Modal: confirmación de emisión -->
+<dialog id="confirm_broadcast_modal" class="modal">
+    <div class="modal-box bg-navy-900 border border-navy-800 max-w-md">
+        <div class="flex items-start gap-4">
+            <div class="w-11 h-11 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center shrink-0 text-brand text-lg">
+                <i data-lucide="radio-tower" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h3 class="font-semibold text-white">¿Confirmar emisión por megafonía?</h3>
+                <p class="text-xs text-slate-400 mt-1">Revisa los detalles antes de transmitir el audio a los altavoces.</p>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-navy-950/80 rounded-lg border border-navy-800 space-y-2 text-xs">
+            <div class="flex justify-between border-b border-navy-800 pb-1.5">
+                <span class="text-slate-400">Destino:</span>
+                <span id="confirm-destino" class="font-medium text-slate-200 text-right"></span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-400">Tono:</span>
+                <span id="confirm-tono" class="font-medium text-slate-200"></span>
+            </div>
+        </div>
+
+        <div class="modal-action border-t border-navy-800 pt-4 mt-4">
+            <button type="button" onclick="confirm_broadcast_modal.close()" class="btn btn-sm btn-ghost">Cancelar</button>
+            <button type="button" onclick="submitSend()"
+                    class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                <i data-lucide="volume-2" class="w-4 h-4"></i> Emitir ahora
+            </button>
         </div>
     </div>
-
-    <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 font-medium flex items-center gap-2">
-        <i data-lucide="send" class="w-4 h-4"></i> Enviar
-    </button>
-</form>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
 <script>
+const form = document.getElementById("send-form");
 const allRadio = document.getElementById("target-all");
 const zonesRadio = document.getElementById("target-zones");
-const picker = document.getElementById("zone-picker");
-function updatePicker() {
-    picker.classList.toggle("opacity-50", allRadio.checked);
-    picker.classList.toggle("pointer-events-none", allRadio.checked);
+const speakersRadio = document.getElementById("target-speakers");
+const zonePicker = document.getElementById("zone-picker");
+const speakerPicker = document.getElementById("speaker-picker");
+
+function updatePickers() {
+    zonePicker.classList.toggle("hidden", !zonesRadio.checked);
+    speakerPicker.classList.toggle("hidden", !speakersRadio.checked);
 }
-allRadio.addEventListener("change", updatePicker);
-zonesRadio.addEventListener("change", updatePicker);
+[allRadio, zonesRadio, speakersRadio].forEach(r => r.addEventListener("change", updatePickers));
+
+function applyTemplate(text) {
+    const textarea = document.getElementById("text-input");
+    textarea.value = text;
+    textarea.dispatchEvent(new Event("input"));
+}
 
 const previewBtn = document.getElementById("preview-btn");
 const previewBtnLabel = document.getElementById("preview-btn-label");
 const previewPlayer = document.getElementById("preview-player");
 const previewError = document.getElementById("preview-error");
 const textInput = document.getElementById("text-input");
+const charCount = document.getElementById("char-count");
+const toneSelect = document.getElementById("tone-select");
+const voiceSelect = document.getElementById("voice-select");
+const repeatsSelect = document.getElementById("repeats-select");
+
+textInput.addEventListener("input", () => {
+    charCount.textContent = textInput.value.length + " caracteres";
+});
+charCount.textContent = textInput.value.length + " caracteres";
 
 previewBtn.addEventListener("click", async () => {
     const text = textInput.value.trim();
@@ -76,7 +249,12 @@ previewBtn.addEventListener("click", async () => {
     try {
         const resp = await fetch("{{ url_for('manual_send.preview') }}", {
             method: "POST",
-            body: new URLSearchParams({ text }),
+            body: new URLSearchParams({
+                text,
+                tone_id: toneSelect.value,
+                voice_choice: voiceSelect.value,
+                repeats: repeatsSelect.value,
+            }),
         });
         if (!resp.ok) {
             const data = await resp.json().catch(() => ({}));
@@ -94,5 +272,32 @@ previewBtn.addEventListener("click", async () => {
         previewBtnLabel.textContent = "Escuchar preview";
     }
 });
+
+function openConfirm() {
+    if (!textInput.value.trim()) {
+        textInput.reportValidity();
+        return;
+    }
+
+    let destino = "Todas las zonas";
+    if (zonesRadio.checked) {
+        const labels = Array.from(zonePicker.querySelectorAll('input[type=checkbox]:checked')).map(c => c.dataset.label);
+        destino = labels.length ? "Zonas: " + labels.join(", ") : "Ninguna zona seleccionada";
+    } else if (speakersRadio.checked) {
+        const labels = Array.from(speakerPicker.querySelectorAll('input[type=checkbox]:checked')).map(c => c.dataset.label);
+        destino = labels.length ? "Altavoces: " + labels.join(", ") : "Ningún altavoz seleccionado";
+    }
+    document.getElementById("confirm-destino").textContent = destino;
+
+    const toneOption = toneSelect.options[toneSelect.selectedIndex];
+    document.getElementById("confirm-tono").textContent = toneOption.text;
+
+    confirm_broadcast_modal.showModal();
+}
+
+function submitSend() {
+    confirm_broadcast_modal.close();
+    form.submit();
+}
 </script>
 {% endblock %}

@@ -86,6 +86,16 @@ CREATE TABLE IF NOT EXISTS message_targets (
     checked_at      TEXT
 );
 
+-- Plantillas de texto rápidas para el envío manual (/send). Gestionadas
+-- desde Configuración, igual que los tonos, pero sin default/enabled: solo
+-- alta y borrado.
+CREATE TABLE IF NOT EXISTS message_templates (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    text       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS processed_incidents (
     incident_id         INTEGER PRIMARY KEY,   -- properties.id del geojson
     first_seen_at        TEXT NOT NULL DEFAULT (datetime('now')),

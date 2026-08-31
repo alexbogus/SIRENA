@@ -4,6 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
 import config
+import models.message_templates as message_templates_model
 import models.settings as settings_model
 import models.tones as tones_model
 from routes.auth import login_required
@@ -33,7 +34,32 @@ def index():
         min_retention=settings_model.MIN_RETENTION_DAYS,
         max_retention=settings_model.MAX_RETENTION_DAYS,
         tones=tones_model.list_all(),
+        templates=message_templates_model.list_all(),
+        tts_voice=settings_model.tts_voice(),
+        tts_speaker_id=settings_model.tts_speaker_id(),
+        tts_length_scale=settings_model.tts_length_scale(),
+        tts_expressiveness=settings_model.tts_noise_scale(),
+        tts_sentence_silence=settings_model.tts_sentence_silence(),
+        tts_voices=settings_model.TTS_VOICES,
+        min_length_scale=settings_model.MIN_TTS_LENGTH_SCALE,
+        max_length_scale=settings_model.MAX_TTS_LENGTH_SCALE,
+        min_expressiveness=settings_model.MIN_TTS_NOISE,
+        max_expressiveness=settings_model.MAX_TTS_NOISE,
+        min_sentence_silence=settings_model.MIN_TTS_SENTENCE_SILENCE,
+        max_sentence_silence=settings_model.MAX_TTS_SENTENCE_SILENCE,
     )
+
+
+def _parse_voice_choice(raw: str) -> tuple[str, int | None]:
+    """"filename|speaker_id" (speaker_id vacío = modelo de un solo locutor)
+    -> (filename, speaker_id). El valor viene de un <select> cuyas opciones
+    se generan desde settings_model.TTS_VOICES, así que se asume bien
+    formado; si no lo está, cae al primer valor del catálogo."""
+    filename, _, speaker_raw = raw.partition("|")
+    if filename not in {v["filename"] for v in settings_model.TTS_VOICES}:
+        default = settings_model.TTS_VOICES[0]
+        return default["filename"], default["speaker_id"]
+    return filename, int(speaker_raw) if speaker_raw else None
 
 
 @bp.route("/", methods=["POST"])
@@ -48,6 +74,14 @@ def save():
                                 settings_model.MIN_RETENTION_DAYS, settings_model.MAX_RETENTION_DAYS)
         dedupe_retention = _clamp(int(request.form.get("dedupe_retention_days", 90)),
                                    settings_model.MIN_RETENTION_DAYS, settings_model.MAX_RETENTION_DAYS)
+        tts_voice, tts_speaker_id = _parse_voice_choice(request.form.get("tts_voice_choice", ""))
+        tts_length_scale = _clamp(float(request.form.get("tts_length_scale", 1.0)),
+                                   settings_model.MIN_TTS_LENGTH_SCALE, settings_model.MAX_TTS_LENGTH_SCALE)
+        tts_expressiveness = _clamp(float(request.form.get("tts_expressiveness", 0.75)),
+                                     settings_model.MIN_TTS_NOISE, settings_model.MAX_TTS_NOISE)
+        tts_sentence_silence = _clamp(float(request.form.get("tts_sentence_silence", 0.3)),
+                                       settings_model.MIN_TTS_SENTENCE_SILENCE,
+                                       settings_model.MAX_TTS_SENTENCE_SILENCE)
     except (TypeError, ValueError):
         flash("Valores inválidos.", "error")
         return redirect(url_for("settings.index"))
@@ -56,14 +90,21 @@ def save():
     settings_model.set("status_poll_interval_s", str(status_interval))
     settings_model.set("db_log_retention_days", str(log_retention))
     settings_model.set("dedupe_retention_days", str(dedupe_retention))
+    settings_model.set("tts_voice", tts_voice)
+    settings_model.set("tts_speaker_id", str(tts_speaker_id) if tts_speaker_id is not None else "")
+    settings_model.set("tts_length_scale", str(tts_length_scale))
+    settings_model.set("tts_noise_scale", str(tts_expressiveness))
+    settings_model.set("tts_noise_w", str(tts_expressiveness))
+    settings_model.set("tts_sentence_silence", str(tts_sentence_silence))
 
     _reschedule_poll_jobs(cv112_interval, status_interval)
 
     logger.info(
         f"Configuración actualizada: cv112_poll={cv112_interval}s, status_poll={status_interval}s, "
-        f"log_retention={log_retention}d, dedupe_retention={dedupe_retention}d"
+        f"log_retention={log_retention}d, dedupe_retention={dedupe_retention}d, "
+        f"tts_voice={tts_voice}, tts_speaker_id={tts_speaker_id}"
     )
-    flash("Configuración guardada. Los nuevos intervalos ya están activos.", "success")
+    flash("Configuración guardada. Los nuevos intervalos y la voz ya están activos.", "success")
     return redirect(url_for("settings.index"))
 
 
@@ -144,6 +185,35 @@ def tones_delete(tone_id: int):
     tones_model.delete(tone_id)
     logger.info(f"Tono eliminado: {tone['name']!r}")
     flash("Tono eliminado.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/templates/create", methods=["POST"])
+@login_required
+def templates_create():
+    name = request.form.get("name", "").strip()
+    text = request.form.get("text", "").strip()
+
+    if not name or not text:
+        flash("Nombre y texto son obligatorios.", "error")
+        return redirect(url_for("settings.index"))
+
+    message_templates_model.create(name, text)
+    logger.info(f"Plantilla creada: {name!r}")
+    flash(f"Plantilla {name!r} añadida.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/templates/<int:template_id>/delete", methods=["POST"])
+@login_required
+def templates_delete(template_id: int):
+    template = message_templates_model.get(template_id)
+    if not template:
+        flash("Plantilla no encontrada.", "error")
+        return redirect(url_for("settings.index"))
+    message_templates_model.delete(template_id)
+    logger.info(f"Plantilla eliminada: {template['name']!r}")
+    flash("Plantilla eliminada.", "success")
     return redirect(url_for("settings.index"))
 
 

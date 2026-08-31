@@ -13,6 +13,7 @@ _COLUMN_MIGRATIONS = [
     ("zones", "enabled", "INTEGER NOT NULL DEFAULT 1"),
     ("alert_rules", "tone_id", "INTEGER REFERENCES tones(id)"),
     ("speakers", "enabled", "INTEGER NOT NULL DEFAULT 1"),
+    ("speakers", "description", "TEXT"),
     ("speaker_status", "mac", "TEXT"),
 ]
 

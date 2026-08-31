@@ -116,6 +116,33 @@ def history_for_speaker(speaker_id: int, limit: int = 5) -> list[dict]:
     ]
 
 
+def full_history() -> list[dict]:
+    """Histórico completo de mensajes enviados a todos los altavoces, para la
+    página de histórico global (ordenable/buscable en el cliente)."""
+    with db_cursor() as cur:
+        rows = cur.execute(
+            """
+            SELECT m.sent_at, m.source, m.target_label, m.text,
+                   s.name AS speaker_name, mt.delivery_status
+            FROM message_targets mt
+            JOIN messages m ON m.id = mt.message_id
+            JOIN speakers s ON s.id = mt.speaker_id
+            ORDER BY m.sent_at DESC
+            """
+        ).fetchall()
+    return [
+        {
+            "sent_at": config.format_timestamp_es(r["sent_at"]),
+            "source": r["source"],
+            "speaker_name": r["speaker_name"],
+            "target_label": r["target_label"] or "—",
+            "text": r["text"],
+            "delivery_status": r["delivery_status"],
+        }
+        for r in rows
+    ]
+
+
 def purge_older_than(cutoff_iso: str) -> int:
     with db_cursor() as cur:
         cur.execute("DELETE FROM messages WHERE sent_at < ?", (cutoff_iso,))

@@ -24,11 +24,12 @@ def create():
     ip = request.form.get("ip", "").strip()
     port = int(request.form.get("port") or 5005)
     zone_ids = [int(z) for z in request.form.getlist("zone_ids")]
+    description = request.form.get("description", "").strip() or None
     if not name or not ip:
         flash("Nombre e IP son obligatorios.", "error")
         return redirect(url_for("speakers.index"))
     try:
-        speakers_model.create(name, ip, port, zone_ids)
+        speakers_model.create(name, ip, port, zone_ids, description)
         logger.info(f"Altavoz creado: {name} ({ip}:{port})")
         audit_model.record("speaker", "created", name, f"ip={ip} port={port}")
         flash(f"Altavoz {name!r} añadido.", "success")
@@ -44,9 +45,10 @@ def edit(speaker_id: int):
     ip = request.form.get("ip", "").strip()
     port = int(request.form.get("port") or 5005)
     zone_ids = [int(z) for z in request.form.getlist("zone_ids")]
+    description = request.form.get("description", "").strip() or None
     before = speakers_model.get(speaker_id)
     try:
-        speakers_model.update(speaker_id, name, ip, port, zone_ids)
+        speakers_model.update(speaker_id, name, ip, port, zone_ids, description)
         logger.info(f"Altavoz {speaker_id} actualizado: {name} ({ip}:{port})")
         details = f"ip={before['ip'] if before else '?'}->{ip} port={before['port'] if before else '?'}->{port}"
         audit_model.record("speaker", "updated", name, details)

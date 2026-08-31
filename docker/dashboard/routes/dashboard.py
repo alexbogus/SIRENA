@@ -59,6 +59,12 @@ def api_speakers_status():
                      "auto_alerts_enabled": settings_model.auto_alerts_enabled()})
 
 
+@bp.route("/messages/history")
+@login_required
+def message_history():
+    return render_template("message_history.html", entries=messages_model.full_history())
+
+
 @bp.route("/api/auto-alerts/toggle", methods=["POST"])
 @login_required
 def toggle_auto_alerts():

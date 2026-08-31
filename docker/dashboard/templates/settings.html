@@ -45,6 +45,58 @@
         </div>
     </div>
 
+    <div>
+        <h2 class="font-medium mb-3">Voz (Text-to-Speech)</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Voz</label>
+                <select name="tts_voice_choice" class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2">
+                    {% for v in tts_voices %}
+                    {% set value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
+                    <option value="{{ value }}"
+                        {{ "selected" if v.filename == tts_voice and v.speaker_id == tts_speaker_id }}>
+                        {{ v.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">
+                    Velocidad de lectura ({{ tts_length_scale }}x — más alto = más lento)
+                </label>
+                <input type="range" name="tts_length_scale" value="{{ tts_length_scale }}"
+                       min="{{ min_length_scale }}" max="{{ max_length_scale }}" step="0.05"
+                       class="w-full">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">
+                    Expresividad ({{ tts_expressiveness }} — más alto = prosodia menos plana/robótica)
+                </label>
+                <input type="range" name="tts_expressiveness" value="{{ tts_expressiveness }}"
+                       min="{{ min_expressiveness }}" max="{{ max_expressiveness }}" step="0.05"
+                       class="w-full">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">
+                    Pausa entre frases ({{ tts_sentence_silence }}s)
+                </label>
+                <input type="range" name="tts_sentence_silence" value="{{ tts_sentence_silence }}"
+                       min="{{ min_sentence_silence }}" max="{{ max_sentence_silence }}" step="0.05"
+                       class="w-full">
+            </div>
+            <button type="button" id="tts-preview-btn"
+                    class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+                <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
+                <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
+                <span id="tts-preview-label">Probar voz</span>
+            </button>
+            <p class="text-xs text-slate-500">
+                "Probar voz" reproduce un aviso de ejemplo con la voz guardada actualmente --
+                guarda los cambios de arriba antes de probarlos.
+            </p>
+        </div>
+    </div>
+
     <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
         Guardar
     </button>
@@ -122,6 +174,50 @@
     </form>
     <audio id="tone-player" class="hidden"></audio>
 </div>
+
+<div class="bg-navy-900 border border-navy-800 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+    <div>
+        <h2 class="font-medium mb-1">Plantillas rápidas</h2>
+        <p class="text-xs text-slate-500">
+            Textos predefinidos disponibles con un clic en el formulario de envío manual (/send).
+        </p>
+    </div>
+
+    <div class="space-y-2">
+        {% for t in templates %}
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-navy-800 rounded-lg px-3 py-2">
+            <div class="min-w-[140px]">
+                <div class="text-sm">{{ t.name }}</div>
+                <div class="text-xs text-slate-500 truncate max-w-xs">{{ t.text }}</div>
+            </div>
+            <form method="post" action="{{ url_for('settings.templates_delete', template_id=t.id) }}"
+                  data-confirm="¿Eliminar la plantilla {{ t.name }}?" data-confirm-variant="danger">
+                <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">No hay plantillas creadas todavía.</p>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('settings.templates_create') }}"
+          class="space-y-2 pt-2 border-t border-navy-800">
+        <div>
+            <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+            <input name="name" required class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs text-slate-400 mb-1">Texto</label>
+            <textarea name="text" required rows="2"
+                      class="w-full bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+        <button class="bg-brand hover:bg-brand-dark rounded-lg px-4 py-2 text-sm font-medium">
+            Añadir plantilla
+        </button>
+    </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -160,6 +256,52 @@
         if (activeBtn) setPlaying(activeBtn, false);
         activeBtn = null;
     });
+})();
+
+(function () {
+    const btn = document.getElementById("tts-preview-btn");
+    if (!btn) return;
+    const label = document.getElementById("tts-preview-label");
+    const player = new Audio();
+    let objectUrl = null;
+    let playing = false;
+
+    function setPlaying(state) {
+        playing = state;
+        btn.querySelector(".icon-play").classList.toggle("hidden", state);
+        btn.querySelector(".icon-pause").classList.toggle("hidden", !state);
+    }
+
+    btn.addEventListener("click", async () => {
+        if (playing) {
+            player.pause();
+            setPlaying(false);
+            return;
+        }
+
+        label.textContent = "Generando...";
+        btn.disabled = true;
+        try {
+            const body = new FormData();
+            body.set("text", "Atención. Aviso de prueba de la voz configurada en el panel.");
+            const resp = await fetch("{{ url_for('manual_send.preview') }}", { method: "POST", body });
+            if (!resp.ok) throw new Error("preview failed");
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = URL.createObjectURL(await resp.blob());
+            player.src = objectUrl;
+            await player.play();
+            setPlaying(true);
+        } catch (err) {
+            label.textContent = "Error al generar el audio";
+            setTimeout(() => { label.textContent = "Probar voz"; }, 3000);
+            return;
+        } finally {
+            btn.disabled = false;
+        }
+        label.textContent = "Probar voz";
+    });
+
+    player.addEventListener("ended", () => setPlaying(false));
 })();
 </script>
 {% endblock %}

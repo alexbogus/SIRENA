@@ -14,6 +14,18 @@ _DEFAULTS = {
     # gestiona por separado del retention de logs porque cumple una función
     # distinta (evitar reenvíos), no es un log de auditoría.
     "dedupe_retention_days": "90",
+    # Parámetros de síntesis de voz (Piper), ver services/tts.py. Los
+    # defaults de noise_scale/noise_w son ligeramente más altos que los de
+    # Piper (0.667/0.8) para que la prosodia suene menos plana/robótica.
+    # sharvard-medium es multi-speaker (0=masculina, 1=femenina), mismo
+    # acento de España que davefx -- permite elegir género sin cambiar de
+    # acento.
+    "tts_voice": "es_ES-sharvard-medium.onnx",
+    "tts_speaker_id": "1",
+    "tts_length_scale": "1.0",
+    "tts_noise_scale": "0.75",
+    "tts_noise_w": "0.85",
+    "tts_sentence_silence": "0.3",
 }
 
 # Límites razonables para los campos numéricos editables desde /settings.
@@ -21,6 +33,21 @@ MIN_POLL_INTERVAL_S = 10
 MAX_POLL_INTERVAL_S = 3600
 MIN_RETENTION_DAYS = 1
 MAX_RETENTION_DAYS = 3650
+MIN_TTS_LENGTH_SCALE = 0.5
+MAX_TTS_LENGTH_SCALE = 2.0
+MIN_TTS_NOISE = 0.0
+MAX_TTS_NOISE = 1.0
+MIN_TTS_SENTENCE_SILENCE = 0.0
+MAX_TTS_SENTENCE_SILENCE = 2.0
+
+# Catálogo de voces instaladas por download_voice.sh (docker/piper/), con
+# etiqueta legible para el desplegable de /settings. speaker_id es None
+# para modelos de un solo locutor.
+TTS_VOICES = [
+    {"filename": "es_ES-sharvard-medium.onnx", "speaker_id": 1, "label": "Femenina (sharvard)"},
+    {"filename": "es_ES-sharvard-medium.onnx", "speaker_id": 0, "label": "Masculina (sharvard)"},
+    {"filename": "es_ES-davefx-medium.onnx", "speaker_id": None, "label": "Masculina (davefx, alternativa)"},
+]
 
 
 def get(key: str) -> str | None:
@@ -78,3 +105,28 @@ def db_log_retention_days() -> int:
 
 def dedupe_retention_days() -> int:
     return int(get("dedupe_retention_days"))
+
+
+def tts_voice() -> str:
+    return get("tts_voice")
+
+
+def tts_speaker_id() -> int | None:
+    value = get("tts_speaker_id")
+    return int(value) if value not in (None, "") else None
+
+
+def tts_length_scale() -> float:
+    return float(get("tts_length_scale"))
+
+
+def tts_noise_scale() -> float:
+    return float(get("tts_noise_scale"))
+
+
+def tts_noise_w() -> float:
+    return float(get("tts_noise_w"))
+
+
+def tts_sentence_silence() -> float:
+    return float(get("tts_sentence_silence"))

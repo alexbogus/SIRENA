@@ -4,15 +4,19 @@ from pathlib import Path
 from flask import Blueprint, after_this_request, flash, redirect, render_template, request, send_file, url_for
 
 import config
+import models.message_templates as message_templates_model
 import models.messages as messages_model
+import models.settings as settings_model
 import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
+import models.tones as tones_model
 import models.zones as zones_model
 from routes.auth import login_required
+from routes.settings import _parse_voice_choice
 from scheduler import scheduler
 from services.delivery_confirmation import schedule_confirmations
 from services.sender import send_to_many
-from services.tts import build_alert_wav
+from services.tts import build_alert_wav, build_preview_wav
 
 bp = Blueprint("manual_send", __name__, url_prefix="/send")
 logger = config.get_logger("manual_send")
@@ -21,7 +25,30 @@ logger = config.get_logger("manual_send")
 @bp.route("/")
 @login_required
 def index():
-    return render_template("manual_send.html", zones=zones_model.list_all())
+    return render_template(
+        "manual_send.html",
+        zones=zones_model.list_all(),
+        speakers=speakers_model.list_all(),
+        tones=tones_model.list_enabled(),
+        tts_voices=settings_model.TTS_VOICES,
+        templates=message_templates_model.list_all(),
+    )
+
+
+def _parse_tone_id() -> int | None:
+    raw = request.form.get("tone_id", "").strip()
+    return int(raw) if raw else None
+
+
+def _parse_voice_override(raw: str) -> tuple[str | None, int | None]:
+    """A diferencia de routes.settings._parse_voice_choice (que siempre
+    resuelve a una voz del catálogo), aquí un valor vacío significa "no
+    sobrescribir" -- se usa la voz por defecto de Configuración (ver
+    settings.tts-preview-btn, que llama a este preview sin voice_choice)."""
+    raw = raw.strip()
+    if not raw:
+        return None, None
+    return _parse_voice_choice(raw)
 
 
 @bp.route("/preview", methods=["POST"])
@@ -31,8 +58,17 @@ def preview():
     if not text:
         return {"error": "El texto no puede estar vacío."}, 400
 
+    tone_id = _parse_tone_id()
+    voice, speaker_id = _parse_voice_override(request.form.get("voice_choice", ""))
     try:
-        wav_path = build_alert_wav(text)
+        repeats = int(request.form.get("repeats", 1))
+    except (TypeError, ValueError):
+        repeats = 1
+
+    try:
+        wav_path = build_preview_wav(
+            text, tone_id=tone_id, voice=voice, speaker_id=speaker_id, repeats=repeats
+        )
     except Exception:
         logger.exception("Fallo de síntesis TTS en preview")
         return {"error": "Fallo al generar el audio (Piper no responde)."}, 502
@@ -49,33 +85,41 @@ def preview():
 @login_required
 def send():
     text = request.form.get("text", "").strip()
-    all_speakers = request.form.get("target") == "all"
-    zone_ids = [int(z) for z in request.form.getlist("zone_ids")]
+    target = request.form.get("target")
+    all_speakers = target == "all"
+    zone_ids = [int(z) for z in request.form.getlist("zone_ids")] if target == "zones" else []
+    speaker_ids = [int(s) for s in request.form.getlist("speaker_ids")] if target == "speakers" else []
+    tone_id = _parse_tone_id()
 
     if not text:
         flash("El texto no puede estar vacío.", "error")
         return redirect(url_for("manual_send.index"))
 
-    targets = speakers_model.resolve_targets(zone_ids=zone_ids, all_speakers=all_speakers)
+    targets = speakers_model.resolve_targets(
+        zone_ids=zone_ids, all_speakers=all_speakers, speaker_ids=speaker_ids
+    )
     if not targets:
         flash("No hay altavoces en el destino seleccionado.", "error")
         return redirect(url_for("manual_send.index"))
 
     if all_speakers:
         target_label = "Todos"
+    elif target == "speakers":
+        speaker_names = [t["name"] for t in targets]
+        target_label = ", ".join(speaker_names) if speaker_names else "—"
     else:
         zone_names = [z["name"] for z in zones_model.list_all() if z["id"] in zone_ids]
         target_label = ", ".join(zone_names) if zone_names else "—"
 
     try:
-        wav_path = build_alert_wav(text)
+        wav_path = build_alert_wav(text, tone_id=tone_id)
     except Exception:
         logger.exception("Fallo de síntesis TTS en envío manual")
         flash("Fallo al generar el audio (Piper no responde). Inténtalo de nuevo.", "error")
         return redirect(url_for("manual_send.index"))
 
-    speaker_ids = [t["id"] for t in targets]
-    message_id = messages_model.create(source="manual", text=text, speaker_ids=speaker_ids,
+    target_speaker_ids = [t["id"] for t in targets]
+    message_id = messages_model.create(source="manual", text=text, speaker_ids=target_speaker_ids,
                                         target_label=target_label)
     sent_at = datetime.datetime.now().isoformat(timespec="seconds")
 

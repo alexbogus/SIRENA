@@ -5,7 +5,7 @@ def list_all() -> list[dict]:
     with db_cursor() as cur:
         rows = cur.execute(
             """
-            SELECT s.*, ss.firmware_version, ss.rssi_dbm, ss.state, ss.volume_percent,
+            SELECT s.*, ss.firmware_version, ss.mac, ss.rssi_dbm, ss.state, ss.volume_percent,
                    ss.last_message_at, ss.last_healthcheck_at, ss.uptime_seconds,
                    ss.last_poll_ok, ss.last_poll_at
             FROM speakers s
@@ -39,19 +39,24 @@ def zones_for_speaker(speaker_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def create(name: str, ip: str, port: int, zone_ids: list[int]) -> int:
+def create(name: str, ip: str, port: int, zone_ids: list[int], description: str | None = None) -> int:
     with db_cursor() as cur:
-        cur.execute("INSERT INTO speakers(name, ip, port) VALUES (?, ?, ?)", (name, ip, port))
+        cur.execute(
+            "INSERT INTO speakers(name, ip, port, description) VALUES (?, ?, ?, ?)",
+            (name, ip, port, description),
+        )
         speaker_id = cur.lastrowid
         _set_zones(cur, speaker_id, zone_ids)
     return speaker_id
 
 
-def update(speaker_id: int, name: str, ip: str, port: int, zone_ids: list[int]) -> None:
+def update(
+    speaker_id: int, name: str, ip: str, port: int, zone_ids: list[int], description: str | None = None
+) -> None:
     with db_cursor() as cur:
         cur.execute(
-            "UPDATE speakers SET name = ?, ip = ?, port = ? WHERE id = ?",
-            (name, ip, port, speaker_id),
+            "UPDATE speakers SET name = ?, ip = ?, port = ?, description = ? WHERE id = ?",
+            (name, ip, port, description, speaker_id),
         )
         _set_zones(cur, speaker_id, zone_ids)
 
@@ -74,14 +79,25 @@ def _set_zones(cur, speaker_id: int, zone_ids: list[int]) -> None:
     )
 
 
-def resolve_targets(zone_ids: list[int] | None, all_speakers: bool) -> list[dict]:
-    """Resuelve una selección de zonas (o el target especial 'todos') a la
-    lista de altavoces únicos correspondiente."""
-    if all_speakers or not zone_ids:
-        if all_speakers:
-            with db_cursor() as cur:
-                rows = cur.execute("SELECT * FROM speakers WHERE enabled = 1").fetchall()
-            return [dict(r) for r in rows]
+def resolve_targets(
+    zone_ids: list[int] | None, all_speakers: bool, speaker_ids: list[int] | None = None
+) -> list[dict]:
+    """Resuelve una selección de zonas, altavoces individuales, o el target
+    especial 'todos', a la lista de altavoces únicos correspondiente.
+    Prioridad: all_speakers > speaker_ids > zone_ids."""
+    if all_speakers:
+        with db_cursor() as cur:
+            rows = cur.execute("SELECT * FROM speakers WHERE enabled = 1").fetchall()
+        return [dict(r) for r in rows]
+    if speaker_ids:
+        with db_cursor() as cur:
+            placeholders = ",".join("?" for _ in speaker_ids)
+            rows = cur.execute(
+                f"SELECT * FROM speakers WHERE enabled = 1 AND id IN ({placeholders})",
+                speaker_ids,
+            ).fetchall()
+        return [dict(r) for r in rows]
+    if not zone_ids:
         return []
     with db_cursor() as cur:
         placeholders = ",".join("?" for _ in zone_ids)
