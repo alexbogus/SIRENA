@@ -4,6 +4,7 @@ preámbulo "ding-ding"."""
 import re
 import subprocess
 import tempfile
+import time
 import wave
 from pathlib import Path
 
@@ -63,15 +64,21 @@ def synthesize(text: str, voice: str | None = None, speaker_id: int | None = Non
     if speaker_id is not None:
         payload["speaker"] = speaker_id
 
+    t0 = time.monotonic()
     resp = requests.post(config.PIPER_URL, json=payload, timeout=30)
     resp.raise_for_status()
+    t_piper = time.monotonic() - t0
+    logger.info(f"TTS síntesis Piper: {t_piper:.2f}s (texto {len(text)} chars)")
 
     raw_fd = tempfile.NamedTemporaryFile(suffix="_piper_raw.wav", delete=False)
     raw_fd.write(resp.content)
     raw_fd.close()
 
     resampled_path = raw_fd.name.replace("_piper_raw.wav", "_piper_16k.wav")
+    t1 = time.monotonic()
     _resample_to_16k_mono(raw_fd.name, resampled_path)
+    t_resample = time.monotonic() - t1
+    logger.info(f"TTS resampleo ffmpeg: {t_resample:.2f}s")
     Path(raw_fd.name).unlink(missing_ok=True)
     return resampled_path
 
@@ -98,11 +105,13 @@ def build_alert_wav(
         tone = tones_model.get_default()
     tone_path = _TONES_DIR / tone["filename"]
 
+    t0 = time.monotonic()
     speech_path = synthesize(text, voice=voice, speaker_id=speaker_id)
     out_fd = tempfile.NamedTemporaryFile(suffix="_alert.wav", delete=False)
     out_fd.close()
     _concat_wavs([str(tone_path), speech_path], out_fd.name, silence_ms=_SILENCE_MS)
     Path(speech_path).unlink(missing_ok=True)
+    logger.info(f"TTS build_alert_wav total: {time.monotonic() - t0:.2f}s")
     return out_fd.name
 
 

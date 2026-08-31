@@ -1,6 +1,7 @@
 """Envío de audio a altavoces reales, sobre el módulo compartido
 _protocol_sender (docker/_protocol_sender.py) -- no reimplementa framing/Opus."""
 import socket
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import config
@@ -14,12 +15,23 @@ def send_to_speaker(host: str, port: int, wav_path: str) -> bool:
     excepción -- NO implica entrega confirmada, el protocolo no tiene ACK
     (ver services/delivery_confirmation.py)."""
     try:
+        t0 = time.monotonic()
         chunks = load_pcm_chunks(wav_path)
+        t_load = time.monotonic() - t0
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
+            t1 = time.monotonic()
             send_stream(sock, (host, port), chunks, quiet=True)
+            t_stream = time.monotonic() - t1
         finally:
             sock.close()
+        # t_stream incluye el colchón inicial + el ritmo real-time del resto
+        # del stream (ver _protocol_sender.py) -- su duración es ~= la
+        # duración del audio por diseño, no es "latencia" a optimizar.
+        logger.info(
+            f"Envío a {host}:{port}: carga PCM {t_load:.2f}s, "
+            f"stream (Opus+UDP, ritmo real-time) {t_stream:.2f}s"
+        )
         return True
     except Exception:
         logger.exception(f"Fallo enviando audio a {host}:{port}")

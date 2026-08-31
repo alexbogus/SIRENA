@@ -6,4 +6,4 @@ WORKDIR /app
 COPY server.py .
 
 EXPOSE 5100
-CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:5100", "--workers", "1", "--threads", "2", "server:app"]
+CMD ["python", "-m", "gunicorn", "--preload", "--bind", "0.0.0.0:5100", "--workers", "1", "--threads", "2", "--timeout", "60", "server:app"]
