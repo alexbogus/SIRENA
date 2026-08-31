@@ -1,3 +1,5 @@
+import subprocess
+import tempfile
 from pathlib import Path
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -7,6 +9,7 @@ import config
 import models.message_templates as message_templates_model
 import models.settings as settings_model
 import models.tones as tones_model
+import services.audio_convert as audio_convert
 from routes.auth import login_required
 from scheduler import scheduler
 
@@ -113,15 +116,16 @@ def save():
 def tones_upload():
     name = request.form.get("name", "").strip()
     file = request.files.get("file")
+    allowed_ext = (".wav", ".mp3")
 
     if not name:
         flash("El nombre del tono es obligatorio.", "error")
         return redirect(url_for("settings.index"))
     if not file or not file.filename:
-        flash("Selecciona un archivo .wav.", "error")
+        flash("Selecciona un archivo de audio (.wav o .mp3).", "error")
         return redirect(url_for("settings.index"))
-    if not file.filename.lower().endswith(".wav"):
-        flash("El archivo debe ser un .wav.", "error")
+    if not file.filename.lower().endswith(allowed_ext):
+        flash("El archivo debe ser .wav o .mp3.", "error")
         return redirect(url_for("settings.index"))
 
     TONES_DIR.mkdir(parents=True, exist_ok=True)
@@ -134,7 +138,18 @@ def tones_upload():
         dest = TONES_DIR / filename
         suffix += 1
 
-    file.save(dest)
+    src_suffix = Path(file.filename).suffix.lower()
+    with tempfile.NamedTemporaryFile(suffix=src_suffix, delete=False) as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
+    try:
+        audio_convert.normalize_to_tone_wav(tmp_path, str(dest))
+    except subprocess.CalledProcessError:
+        flash("No se pudo procesar el archivo: formato de audio no válido o corrupto.", "error")
+        return redirect(url_for("settings.index"))
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
     tones_model.create(name, filename)
     logger.info(f"Tono subido: {name!r} ({filename})")
     flash(f"Tono {name!r} añadido.", "success")
