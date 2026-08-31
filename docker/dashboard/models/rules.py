@@ -1,6 +1,7 @@
 import json
 
 from db import db_cursor
+from models.taxonomy import normalized_forms
 
 
 def list_all(enabled_only: bool = False) -> list[dict]:
@@ -68,7 +69,11 @@ def delete(rule_id: int) -> None:
 
 def matches(rule: dict, municipio: str, category_path: list[str]) -> bool:
     if rule["municipios"]:
-        if not municipio or municipio.strip().lower() not in [m.strip().lower() for m in rule["municipios"]]:
+        if not municipio:
+            return False
+        incident_forms = normalized_forms(municipio)
+        rule_forms = {f for m in rule["municipios"] for f in normalized_forms(m)}
+        if not (incident_forms & rule_forms):
             return False
     if rule["categorias"]:
         matched_any = False

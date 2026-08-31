@@ -2,13 +2,25 @@
 feed del 112CV. Independiente de processed_incidents (que sí se purga) para
 que purgar el dedupe no le borre categorías al desplegable de /rules ni
 provoque falsos "categoría nueva" al reaparecer un id purgado."""
+import unicodedata
+
 from db import db_cursor
 
 
+def normalized_forms(name: str) -> set[str]:
+    """Nombre -> formas normalizadas comparables (minúsculas, sin acentos,
+    una por cada mitad de un nombre dual del 112CV como 'Sagunt/Sagunto')."""
+    parts = [p.strip() for p in name.split("/") if p.strip()] or [name.strip()]
+    out = set()
+    for p in parts:
+        n = unicodedata.normalize("NFKD", p.lower())
+        out.add("".join(c for c in n if not unicodedata.combining(c)))
+    return out
+
+
 def is_known_municipio(municipio: str) -> bool:
-    with db_cursor() as cur:
-        row = cur.execute("SELECT 1 FROM known_municipios WHERE municipio = ?", (municipio,)).fetchone()
-    return row is not None
+    target = normalized_forms(municipio)
+    return any(target & normalized_forms(m) for m in all_municipios())
 
 
 def is_known_taxonomy_path(raw_description: str) -> bool:
@@ -19,11 +31,13 @@ def is_known_taxonomy_path(raw_description: str) -> bool:
     return row is not None
 
 
-def remember_municipio(municipio: str) -> None:
+def remember_municipio(municipio: str, source: str = "feed") -> None:
+    if is_known_municipio(municipio):
+        return  # ya cubierto por otra variante de casing/acentos/nombre dual
     with db_cursor() as cur:
         cur.execute(
-            "INSERT INTO known_municipios(municipio) VALUES (?) ON CONFLICT(municipio) DO NOTHING",
-            (municipio,),
+            "INSERT INTO known_municipios(municipio, source) VALUES (?, ?) ON CONFLICT(municipio) DO NOTHING",
+            (municipio, source),
         )
 
 

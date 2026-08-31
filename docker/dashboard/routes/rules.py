@@ -94,6 +94,21 @@ def rescan():
     return redirect(url_for("rules.index"))
 
 
+@bp.route("/municipios", methods=["POST"])
+@login_required
+def add_municipio():
+    nombre = request.form.get("municipio", "").strip()
+    if not nombre:
+        flash("Escribe el nombre del municipio.", "error")
+    elif taxonomy_model.is_known_municipio(nombre):
+        flash(f"{nombre!r} ya está en la lista (o coincide con una variante existente).", "error")
+    else:
+        taxonomy_model.remember_municipio(nombre, source="manual")
+        logger.info(f"Municipio añadido a mano: {nombre!r}")
+        flash(f"Municipio {nombre!r} añadido.", "success")
+    return redirect(url_for("rules.index"))
+
+
 @bp.route("/<int:rule_id>/delete", methods=["POST"])
 @login_required
 def delete(rule_id: int):

@@ -15,6 +15,30 @@ _COLUMN_MIGRATIONS = [
     ("speakers", "enabled", "INTEGER NOT NULL DEFAULT 1"),
     ("speakers", "description", "TEXT"),
     ("speaker_status", "mac", "TEXT"),
+    ("known_municipios", "source", "TEXT NOT NULL DEFAULT 'feed'"),
+]
+
+# Municipios de la Comarca de l'Horta (Nord + Sud) sembrados en el arranque
+# para que estén disponibles en /rules aunque el feed 112CV no haya reportado
+# todavía ningún incidente ahí -- ver models/taxonomy.py para el porqué
+# (known_municipios solo se rellena hoy con municipios que ya han tenido un
+# incidente real). Grafía: la verificada contra el feed real donde fue
+# posible (Paterna, Moncada, Puçol, Puig, Quart de Poblet, Xirivella,
+# Alcàsser, Alaquàs); el resto es la grafía oficial (Viquipèdia) a falta de
+# verificación empírica -- si el feed usa otra grafía para alguno, aparecerá
+# como fila nueva con source='feed' y habrá que fusionarlas a mano.
+_HORTA_MUNICIPIOS = [
+    # L'Horta Nord
+    "Paterna", "Burjassot", "Alboraia", "Moncada", "Puçol", "Massamagrell",
+    "Godella", "Meliana", "Rafelbunyol", "Tavernes Blanques", "Puig",
+    "la Pobla de Farnals", "Foios", "Rocafort", "Almàssera", "Museros",
+    "Albuixec", "Albalat dels Sorells", "Bonrepòs i Mirambell", "Vinalesa",
+    "Alfara del Patriarca", "Massalfassar", "Emperador",
+    # L'Horta Sud
+    "Alaquàs", "Albal", "Alcàsser", "Aldaia", "Alfafar", "Benetússer",
+    "Beniparrell", "Catarroja", "Llocnou de la Corona", "Manises",
+    "Massanassa", "Mislata", "Paiporta", "Picanya", "Picassent",
+    "Quart de Poblet", "Sedaví", "Silla", "Torrent", "Xirivella",
 ]
 
 # Tonos sembrados la primera vez que arranca el contenedor (tabla `tones`
@@ -46,6 +70,7 @@ def init_db() -> None:
         _apply_column_migrations(conn)
         _seed_default_tones(conn)
         _seed_additional_tones(conn)
+        _seed_known_municipios(conn)
         conn.commit()
 
 
@@ -85,6 +110,22 @@ def _seed_additional_tones(conn: sqlite3.Connection) -> None:
                 (name, filename),
             )
         conn.execute("INSERT INTO settings(key, value) VALUES (?, '1')", (marker_key,))
+
+
+def _seed_known_municipios(conn: sqlite3.Connection) -> None:
+    from models.taxonomy import normalized_forms  # import tardío: evita ciclo db <-> models.taxonomy
+
+    existing = [row["municipio"] for row in conn.execute("SELECT municipio FROM known_municipios")]
+    existing_forms = {f for m in existing for f in normalized_forms(m)}
+    for municipio in _HORTA_MUNICIPIOS:
+        if normalized_forms(municipio) & existing_forms:
+            continue  # ya está (por el seed de una ejecución previa, o porque el feed ya lo reportó)
+        conn.execute(
+            "INSERT INTO known_municipios(municipio, source) VALUES (?, 'manual') "
+            "ON CONFLICT(municipio) DO NOTHING",
+            (municipio,),
+        )
+        existing_forms |= normalized_forms(municipio)
 
 
 def get_connection() -> sqlite3.Connection:

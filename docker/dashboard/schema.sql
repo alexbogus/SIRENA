@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS system_health (
 -- número de municipios/categorías reales es pequeño y estable).
 CREATE TABLE IF NOT EXISTS known_municipios (
     municipio     TEXT PRIMARY KEY,
+    source        TEXT NOT NULL DEFAULT 'feed',  -- 'feed' (visto en un incidente real) | 'manual' (alta a mano o seed)
     first_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
