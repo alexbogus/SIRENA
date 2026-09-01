@@ -1,7 +1,8 @@
 # SIRENA
 SIRENA (Sistema IP de reconocimiento y envio de nuevas alertas)
 
-<img width="770" height="402" alt="image" src="https://github.com/user-attachments/assets/1cdea14a-07d3-47cc-8268-48d56d397195" />
+<img width="1669" height="962" alt="image" src="https://github.com/user-attachments/assets/465955fb-8055-42e8-b9bb-832726deb81f" />
+
 
 Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) para usarlos como megafonía IP en BRAVO 2.
 
