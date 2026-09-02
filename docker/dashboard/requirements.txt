@@ -4,4 +4,4 @@ APScheduler==3.10.4
 requests==2.34.2
 bcrypt==4.2.0
 opuslib==3.0.1
-Markdown==3.7
+Markdown==3.10.3
