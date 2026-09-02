@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 
 import config
+import models.health as health_model
 import models.settings as settings_model
 import models.tones as tones_model
 
@@ -65,8 +66,13 @@ def synthesize(text: str, voice: str | None = None, speaker_id: int | None = Non
         payload["speaker"] = speaker_id
 
     t0 = time.monotonic()
-    resp = requests.post(config.PIPER_URL, json=payload, timeout=30)
-    resp.raise_for_status()
+    try:
+        resp = requests.post(config.PIPER_URL, json=payload, timeout=30)
+        resp.raise_for_status()
+    except Exception as exc:
+        health_model.report_failure("piper", config.now_sql(), str(exc))
+        raise
+    health_model.report_ok("piper", config.now_sql())
     t_piper = time.monotonic() - t0
     logger.info(f"TTS síntesis Piper: {t_piper:.2f}s (texto {len(text)} chars)")
 

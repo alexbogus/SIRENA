@@ -6,30 +6,68 @@
 
 {{ page_header("PANEL DE CONTROL", "Panel") }}
 
-<div class="bg-navy-900 border border-white/10 rounded-xl mb-6 divide-y divide-white/5">
-    <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-white/5">
-        <div class="px-4 py-3">
-            <div class="text-xs text-slate-500 mb-1">Altavoces online</div>
-            <div id="kpi-speakers" class="text-xl font-semibold tnum">—</div>
+<div class="bg-navy-900 border border-white/10 rounded-xl mb-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-white/5">
+        <div class="px-4 py-3.5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-navy-800 border border-white/10 flex items-center justify-center shrink-0">
+                <i data-lucide="radio-tower" class="w-4 h-4 text-brand"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xs text-slate-500 mb-0.5">Altavoces online</div>
+                <div id="kpi-speakers" class="text-xl font-semibold tnum">—</div>
+            </div>
         </div>
-        <div class="px-4 py-3">
-            <div class="text-xs text-slate-500 mb-1">Zonas activas</div>
-            <div id="kpi-zones" class="text-xl font-semibold tnum">{{ zones_active }}</div>
+        <div class="px-4 py-3.5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-navy-800 border border-white/10 flex items-center justify-center shrink-0">
+                <i data-lucide="map-pin" class="w-4 h-4 text-brand"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xs text-slate-500 mb-0.5">Zonas activas</div>
+                <div id="kpi-zones" class="text-xl font-semibold tnum">{{ zones_active }}</div>
+            </div>
         </div>
-        <div class="px-4 py-3">
-            <div class="text-xs text-slate-500 mb-1">Mensajes hoy</div>
-            <div id="kpi-messages-today" class="text-xl font-semibold tnum">{{ messages_today }}</div>
+        <div class="px-4 py-3.5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-navy-800 border border-white/10 flex items-center justify-center shrink-0">
+                <i data-lucide="message-square-text" class="w-4 h-4 text-brand"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xs text-slate-500 mb-0.5">Mensajes hoy</div>
+                <div id="kpi-messages-today" class="text-xl font-semibold tnum">{{ messages_today }}</div>
+            </div>
         </div>
-        <div class="px-4 py-3 flex flex-col justify-center">
-            <div class="text-xs text-slate-500 mb-1">Alertas automáticas</div>
-            <button id="auto-alerts-toggle"
-                    class="self-start px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' if auto_alerts_enabled else 'bg-amber-900/60 text-amber-300 border border-amber-700' }}"
-                    data-enabled="{{ 'true' if auto_alerts_enabled else 'false' }}">
-                {{ 'ACTIVAS' if auto_alerts_enabled else 'PAUSADAS' }}
-            </button>
+        <div class="px-4 py-3.5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-navy-800 border border-white/10 flex items-center justify-center shrink-0">
+                <i data-lucide="{{ 'bell-ring' if auto_alerts_enabled else 'bell-off' }}" class="w-4 h-4 {{ 'text-emerald-400' if auto_alerts_enabled else 'text-amber-400' }}"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xs text-slate-500 mb-0.5">Alertas</div>
+                <button id="auto-alerts-toggle"
+                        class="text-xs px-2 py-0.5 rounded-full border font-medium {{ 'bg-emerald-900/60 text-emerald-300 border-emerald-700/60' if auto_alerts_enabled else 'bg-amber-900/60 text-amber-300 border-amber-700/60' }}"
+                        data-enabled="{{ 'true' if auto_alerts_enabled else 'false' }}">
+                    {{ 'ACTIVAS' if auto_alerts_enabled else 'PAUSADAS' }}
+                </button>
+            </div>
         </div>
     </div>
-    <div id="health-indicator" class="flex flex-wrap items-center gap-2 px-4 py-2.5"></div>
+</div>
+
+<div class="bg-navy-900 border border-white/10 rounded-xl mb-6">
+    <div class="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+        <i data-lucide="activity" class="w-4 h-4 text-slate-500"></i>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Health Check</span>
+    </div>
+    <div id="health-indicator" class="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-white/5">
+        {% for _ in range(2) %}
+        <div class="skeleton-health px-4 py-3 flex items-center gap-3 animate-pulse">
+            <div class="w-2 h-2 rounded-full bg-navy-800 shrink-0"></div>
+            <div class="w-9 h-9 rounded-lg bg-navy-800 shrink-0"></div>
+            <div class="flex-1 space-y-1.5">
+                <div class="h-3.5 w-24 bg-navy-800 rounded"></div>
+                <div class="h-3 w-40 bg-navy-800 rounded"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
 <div id="speaker-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -351,17 +389,51 @@ speakerGrid.addEventListener("click", (e) => {
     applyVolume(speakerId, Number(slider.value));
 });
 
+// Los timestamps de salud vienen de config.now_sql() ("YYYY-MM-DD HH:MM:SS",
+// ya en hora local Europe/Madrid) -- se reordenan por texto a DD/MM/YYYY
+// HH:MM:SS sin pasar por `new Date()` (ese formato con espacio no es
+// parseable de forma fiable en Safari, y tampoco hace falta: ya está en
+// hora local).
+function fmtHealthTs(ts) {
+    if (!ts) return null;
+    const [datePart, timePart] = ts.split(" ");
+    if (!datePart || !timePart) return ts;
+    const [y, mo, d] = datePart.split("-");
+    return `${d}/${mo}/${y} ${timePart}`;
+}
+
+const HEALTH_SERVICES = [
+    {key: "cv112_feed", label: "Feed 112CV", icon: "rss"},
+    {key: "piper", label: "Piper (TTS)", icon: "audio-lines"},
+];
+
 function renderHealth(health) {
     const el = document.getElementById("health-indicator");
     const parts = [];
-    for (const [key, label] of [["cv112_feed", "Feed 112CV"], ["piper", "Piper"]]) {
+    for (const {key, label, icon} of HEALTH_SERVICES) {
         const h = health[key];
         if (!h) continue;
-        if (h.ok) {
-            parts.push(`<span class="text-xs px-2 py-0.5 rounded-full border font-medium bg-emerald-900/60 text-emerald-300 border-emerald-700/60 inline-flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i>${label}</span>`);
-        } else {
-            parts.push(`<span class="text-xs px-2 py-0.5 rounded-full border font-medium bg-red-900/60 text-red-300 border-red-700/60 inline-flex items-center gap-1"><i data-lucide="triangle-alert" class="w-3 h-3"></i>${label}: fallando (${h.consecutive_failures} intentos)</span>`);
-        }
+        const ts = fmtHealthTs(h.ok ? h.last_ok_at : h.last_error_at);
+        const errorAttr = !h.ok && h.last_error_message
+            ? ` title="${h.last_error_message.replace(/"/g, "&quot;")}"`
+            : "";
+        const dotColor = h.ok ? "bg-emerald-400" : "bg-red-400";
+        const statusLine = h.ok
+            ? `OK${ts ? ` · ${ts}` : ""}`
+            : `Fallando${ts ? ` · ${ts}` : ""} (${h.consecutive_failures} intentos)`;
+        const statusColor = h.ok ? "text-slate-500" : "text-red-400";
+        parts.push(`
+            <div class="px-4 py-3 flex items-center gap-3"${errorAttr}>
+                <span class="w-2 h-2 rounded-full shrink-0 ${dotColor}"></span>
+                <div class="w-9 h-9 rounded-lg bg-navy-800 border border-white/10 flex items-center justify-center shrink-0">
+                    <i data-lucide="${icon}" class="w-4 h-4 text-slate-400"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm font-medium truncate">${label}</div>
+                    <div class="text-xs ${statusColor} tnum truncate">${statusLine}</div>
+                </div>
+            </div>
+        `);
     }
     el.innerHTML = parts.join("");
     lucide.createIcons();
