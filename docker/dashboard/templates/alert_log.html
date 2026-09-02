@@ -5,6 +5,11 @@
 {% block content %}
 {{ page_header("HISTÓRICO DE ALERTAS", "Histórico de alertas automáticas (112CV)") }}
 
+<div class="flex justify-end mb-3">
+    <input type="search" id="alert-log-search" placeholder="Buscar por población, categoría, regla o mensaje…"
+           class="input input-sm bg-navy-900 border-white/10 text-slate-100 placeholder:text-slate-500 w-full sm:w-80">
+</div>
+
 <div class="overflow-x-auto">
 <table class="w-full text-sm bg-navy-900 border border-white/10 rounded-xl overflow-hidden">
     <thead class="bg-navy-900/60 text-slate-400 text-left border-b border-white/10">
@@ -31,15 +36,27 @@ const allEntries = {{ entries | tojson }};
 // (compartido con dashboard.html y message_history.html).
 
 let sortState = {col: "first_seen_at", dir: "desc"};
+let query = "";
 
 function ruleBadge(ruleName) {
     if (ruleName) return `<span class="text-emerald-400 inline-flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i>match</span> <span class="text-slate-300">${ruleName}</span>`;
     return `<span class="text-slate-500">sin match</span>`;
 }
 
+function filterEntries(entries) {
+    const q = query.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter(e =>
+        (e.last_municipio || "").toLowerCase().includes(q) ||
+        (e.last_raw_description || "").toLowerCase().includes(q) ||
+        (e.rule_name || "").toLowerCase().includes(q) ||
+        (e.message_text || "").toLowerCase().includes(q)
+    );
+}
+
 function render() {
     const tbody = document.getElementById("alert-log-body");
-    const rows = sortHistory(allEntries, sortState.col, sortState.dir);
+    const rows = sortHistory(filterEntries(allEntries), sortState.col, sortState.dir);
     tbody.innerHTML = "";
     rows.forEach(e => {
         const tr = document.createElement("tr");
@@ -56,7 +73,8 @@ function render() {
         tbody.appendChild(tr);
     });
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">Sin incidentes registrados todavía.</td></tr>`;
+        const msg = query.trim() ? "Sin incidentes que coincidan con la búsqueda." : "Sin incidentes registrados todavía.";
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">${msg}</td></tr>`;
     }
     document.querySelectorAll(".sort-col").forEach(th => {
         const arrow = th.querySelector(".sort-arrow");
@@ -73,6 +91,11 @@ document.querySelectorAll(".sort-col").forEach(th => {
         sortState = {col, dir: sortState.col === col && sortState.dir === "asc" ? "desc" : "asc"};
         render();
     });
+});
+
+document.getElementById("alert-log-search").addEventListener("input", (e) => {
+    query = e.target.value;
+    render();
 });
 
 render();
