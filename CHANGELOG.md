@@ -1,0 +1,67 @@
+# Changelog
+
+Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speaker/` y centro de mando `docker/dashboard/` — SIRENA). Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); sin versionado semántico numerado (proyecto interno sin releases), agrupado por fecha, más reciente primero.
+
+## 2026-09-02
+
+### Corregido
+- Un tono TTS ausente en disco ya no tumba la alerta completa: `services/tts.py` cae al tono por defecto y loguea un warning en vez de lanzar `FileNotFoundError`.
+- Las alertas 112CV que fallaban al anunciarse (tono roto, sin altavoces resueltos) quedaban bloqueadas indefinidamente sin reintentar. Ahora se reintentan en el siguiente poll y el fallo queda visible en `/rules/log` (nueva columna "Estado", campo `processed_incidents.failure_reason`).
+- Los tonos subidos desde `/settings` se perdían en cada rebuild/redeploy del contenedor por falta de volumen persistente — `docker-compose.yml` monta ahora `./audio:/app/static/audio/tones`.
+
+### Cambiado
+- Catálogo de tonos de preámbulo reducido a solo "Urgente" (Clásico/Suave/Selectiva no encajaban tras escucharlos); migración de retirada segura (deshabilita, no borra) para instalaciones ya desplegadas.
+- Convención de volúmenes Docker simplificada a rutas de un solo nivel bajo `docker/`: `./data`, `./logs`, `./audio`, `./voices`.
+
+### Añadido
+- Columna "Población" y buscador por texto libre en el histórico de alertas (`/rules/log`).
+
+## 2026-09-01
+
+### Añadido
+- Guía detallada de diseño (botones, formularios, modales, accesibilidad) para el sistema de diseño del dashboard.
+
+## 2026-08-31
+
+### Añadido
+- Ajustes de síntesis de voz (TTS) y preview de voces Piper en `/settings`.
+- Soporte de subida de tonos en MP3, normalizados automáticamente a 16kHz mono WAV.
+- Alta manual de municipios y seed de la Comarca de l'Horta (Nord + Sud) en `/rules`.
+- Rediseño minimalista del panel SIRENA, con gestión de voces Piper desde `/settings`.
+- Rediseño de la sección de reglas (lista condensada + modales) y de zonas (control de volumen, borrado de logs por altavoz, fix de fechas en histórico).
+- Logo oficial SIRENA en login, favicon y barra lateral.
+
+### Cambiado
+- Modelo de voz de Piper horneado en la imagen Docker (con seed del volumen), eliminando la recarga por request; timing añadido al pipeline TTS.
+
+## 2026-08-30
+
+### Cambiado
+- Piper aislado del exterior en `docker-compose` (solo accesible desde el dashboard vía loopback).
+
+## 2026-08-29
+
+### Añadido — Firmware (`esp32s3-firmware/ip-speaker/`)
+- Hito 0: pinout real del hardware documentado a partir de la demo oficial de Waveshare.
+- Hito 1: WiFi + servidor UDP + reproducción de PCM crudo audible.
+- Hito 2: API HTTP de estado y control (`GET /status`, `POST /volume`).
+- Hito 3: protocolo UDP con cabecera y tipos de mensaje (`START`/`AUDIO`/`END`/`PING`/`PONG`).
+- Hito 4: integración de Opus (decodificación + PLC ante pérdida de paquetes).
+- Hito 5: portal de configuración WiFi/IP en modo AP + persistencia en NVS.
+
+### Añadido — Centro de mando (`docker/dashboard/`)
+- Hito 7: primera versión del centro de mando Docker — gestión de altavoces/zonas, envío manual de mensajes y alertas automáticas sobre el feed 112CV.
+- Rebrand a SIRENA, MAC real por altavoz, altavoces deshabilitables.
+- Efecto de LEDs tipo Alexa en el anillo WS2812 al reproducir audio.
+- LED azul de estado, ajustes de retención/sondeo, auditoría e histórico por altavoz.
+- Preview de audio en envío manual y gestión de tonos por regla.
+- Tono "Selectiva" (señal de protección civil).
+- Script `update.sh` para despliegue en VPS con healthcheck y rollback.
+- Re-escaneo del feed 112CV y multiselect con búsqueda.
+
+### Corregido
+- `last_message_at` de `/status` refleja el instante real del mensaje, no el del poll.
+- Reproductor de preview de tonos y regeneración del tono "Selectiva".
+- Error interno al eliminar una regla ya usada en alguna alerta.
+- Resurrección de tonos borrados por el usuario tras reiniciar el contenedor.
+- Taxonomía 112CV vacía, ding en envío manual, historial largo, UI de zonas/altavoces.

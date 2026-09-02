@@ -8,4 +8,7 @@ Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) para usarlos com
 
 - `esp32s3-firmware/ip-speaker/` — firmware ESP-IDF de cada altavoz (WiFi, protocolo UDP propio, Opus, portal de configuración).
 - `docker/dashboard/` — el centro de mando SIRENA: gestión de altavoces/zonas, envío manual de mensajes (TTS con Piper) y reglas de alerta automática sobre el feed 112CV.
+- `docker/reference_send_audio.py` — implementación de referencia del protocolo de envío de audio (empaquetado de cabecera, codificación Opus, pacing), usada por `docker/dashboard/services/sender.py`.
 - `documentation/` — ver [documentation/README.md](documentation/README.md) para el índice completo (arquitectura, protocolo UDP, API HTTP, setup del entorno).
+
+Para el historial de cambios del proyecto (firmware y dashboard), ver [CHANGELOG.md](CHANGELOG.md).
