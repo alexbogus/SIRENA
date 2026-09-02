@@ -11,6 +11,7 @@
         <tr>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="incident_id">Incidente <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="first_seen_at">Visto <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="last_municipio">Población <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="last_raw_description">Categoría <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="rule_name">Regla <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="message_text">Mensaje <span class="sort-arrow"></span></th>
@@ -46,6 +47,7 @@ function render() {
         tr.innerHTML = `
             <td class="px-3 py-2 font-mono text-xs tnum">${e.incident_id}</td>
             <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">${e.first_seen_at || '—'}</td>
+            <td class="px-3 py-2 text-xs">${e.last_municipio || '—'}</td>
             <td class="px-3 py-2 text-xs">${e.last_raw_description || '—'}</td>
             <td class="px-3 py-2 text-xs">${ruleBadge(e.rule_name)}</td>
             <td class="px-3 py-2 text-xs max-w-xs truncate" title="${(e.message_text || '').replace(/"/g, '&quot;')}">${e.message_text || '—'}</td>
@@ -54,7 +56,7 @@ function render() {
         tbody.appendChild(tr);
     });
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">Sin incidentes registrados todavía.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">Sin incidentes registrados todavía.</td></tr>`;
     }
     document.querySelectorAll(".sort-col").forEach(th => {
         const arrow = th.querySelector(".sort-arrow");
