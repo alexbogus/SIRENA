@@ -30,9 +30,9 @@ cmake_install.cmake
 CMakeLists.txt.user
 
 # --- Centro de mando Docker (docker/dashboard, docker/piper) ---
-docker/dashboard/data/
-docker/dashboard/logs/
+docker/data/
+docker/logs/
 docker/dashboard/tts_assets/
-docker/piper/voices/
+docker/voices/
 __pycache__/
 *.pyc

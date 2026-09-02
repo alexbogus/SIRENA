@@ -16,6 +16,7 @@ _COLUMN_MIGRATIONS = [
     ("speakers", "description", "TEXT"),
     ("speaker_status", "mac", "TEXT"),
     ("known_municipios", "source", "TEXT NOT NULL DEFAULT 'feed'"),
+    ("processed_incidents", "failure_reason", "TEXT"),
 ]
 
 # Municipios de la Comarca de l'Horta (Nord + Sud) sembrados en el arranque
@@ -42,24 +43,19 @@ _HORTA_MUNICIPIOS = [
 ]
 
 # Tonos sembrados la primera vez que arranca el contenedor (tabla `tones`
-# vacía). Los WAV correspondientes los genera scripts/generate_tones.py y se
-# versionan en static/audio/tones/ -- este seed solo crea las filas de BD.
+# vacía). El WAV correspondiente lo genera scripts/generate_tones.py y se
+# versiona en docker/audio/ -- este seed solo crea la fila de BD. De los 4
+# tonos originales (Clásico/Urgente/Suave/Selectiva), tras escucharlos solo
+# Urgente encajaba -- ver _retire_old_tones para la migración de
+# instalaciones que ya habían sembrado los otros 3.
 _DEFAULT_TONES = [
-    ("Clásico", "clasico.wav"),
     ("Urgente", "urgente.wav"),
-    ("Suave", "suave.wav"),
-    ("Selectiva", "selectiva.wav"),
 ]
 
-# Tonos añadidos después del primer arranque de instalaciones ya existentes
-# (donde _seed_default_tones ya no actúa porque la tabla no está vacía). Cada
-# uno se inserta como mucho una vez: se marca en `settings` con la key de
-# abajo para no resucitarlo si el usuario lo borra luego desde /settings
-# (comprobar solo "¿existe ya en `tones`?" resucitaba el tono -- sin su WAV,
-# porque el borrado real si se lo había cargado -- en cada reinicio).
-_ADDITIONAL_TONES = [
-    ("tones_seeded_selectiva", "Selectiva", "selectiva.wav"),
-]
+# Tonos retirados: ya no se siembran, y las instalaciones que los tenían de
+# antes se migran una sola vez en _retire_old_tones (deshabilitados, no
+# borrados -- ver el porqué ahí).
+_RETIRED_TONE_FILENAMES = ["clasico.wav", "suave.wav", "selectiva.wav"]
 
 
 def init_db() -> None:
@@ -69,7 +65,7 @@ def init_db() -> None:
         conn.executescript(schema_sql)
         _apply_column_migrations(conn)
         _seed_default_tones(conn)
-        _seed_additional_tones(conn)
+        _retire_old_tones(conn)
         _seed_known_municipios(conn)
         conn.commit()
 
@@ -92,24 +88,31 @@ def _seed_default_tones(conn: sqlite3.Connection) -> None:
         )
 
 
-def _seed_additional_tones(conn: sqlite3.Connection) -> None:
-    seeded = {
-        row["key"]
-        for row in conn.execute("SELECT key FROM settings WHERE key LIKE 'tones_seeded_%'")
-    }
-    existing_filenames = {row["filename"] for row in conn.execute("SELECT filename FROM tones")}
-    for marker_key, name, filename in _ADDITIONAL_TONES:
-        if marker_key in seeded:
-            continue
-        # Backfill: si la fila ya existe (instalaciones que arrancaron con
-        # esta versión antes de que existiera el marcador), no duplicar --
-        # solo marcar como sembrado.
-        if filename not in existing_filenames:
-            conn.execute(
-                "INSERT INTO tones(name, filename, enabled, is_default) VALUES (?, ?, 1, 0)",
-                (name, filename),
-            )
-        conn.execute("INSERT INTO settings(key, value) VALUES (?, '1')", (marker_key,))
+def _retire_old_tones(conn: sqlite3.Connection) -> None:
+    """Migración de una sola vez para instalaciones ya desplegadas que
+    sembraron los 4 tonos originales: deshabilita (NO borra) Clásico/Suave/
+    Selectiva y deja Urgente como tono por defecto. No se borran las filas
+    porque alert_rules.tone_id tiene REFERENCES tones(id) con
+    PRAGMA foreign_keys=ON (ver get_connection) -- un DELETE fallaría si
+    alguna regla ya apunta a uno de estos tonos. Con enabled=0,
+    services/tts.py::build_alert_wav ya cae automáticamente al tono por
+    defecto para esas reglas. Marcador en `settings` para no pelear con un
+    operador que decida rehabilitar uno de estos tonos a mano después."""
+    marker_key = "tones_retired_v1"
+    already_done = conn.execute(
+        "SELECT 1 FROM settings WHERE key = ?", (marker_key,)
+    ).fetchone()
+    if already_done:
+        return
+
+    placeholders = ",".join("?" for _ in _RETIRED_TONE_FILENAMES)
+    conn.execute(
+        f"UPDATE tones SET enabled = 0 WHERE filename IN ({placeholders})",
+        _RETIRED_TONE_FILENAMES,
+    )
+    conn.execute("UPDATE tones SET is_default = 0")
+    conn.execute("UPDATE tones SET is_default = 1 WHERE filename = 'urgente.wav'")
+    conn.execute("INSERT INTO settings(key, value) VALUES (?, '1')", (marker_key,))
 
 
 def _seed_known_municipios(conn: sqlite3.Connection) -> None:

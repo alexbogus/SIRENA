@@ -92,8 +92,9 @@ def _process_feature(feature: dict, now_sql: str, correlation_id: str, scheduler
     # a intentarlo.
     _check_taxonomy_novelty(raw_description, municipio, correlation_id)
 
-    if record is not None and record["last_raw_description"] == raw_description:
-        return  # ya evaluado con esta misma categoría, no hace falta repetir
+    if record is not None and record["last_raw_description"] == raw_description \
+            and not record["failure_reason"]:
+        return  # ya evaluado con esta misma categoría y sin fallo pendiente, no hace falta repetir
 
     incidents_model.upsert_seen(incident_id, raw_description, municipio, now_sql)
 
@@ -145,6 +146,7 @@ def _announce(incident_id: int, props: dict, geometry: dict | None, rule: dict,
     if not targets:
         logger.warning(f"Regla {rule['name']!r} no resuelve a ningún altavoz, incidente {incident_id} sin enviar",
                         extra={"correlation_id": correlation_id})
+        incidents_model.record_failure(incident_id, "Regla sin altavoces resueltos")
         return
 
     try:
@@ -152,6 +154,7 @@ def _announce(incident_id: int, props: dict, geometry: dict | None, rule: dict,
     except Exception:
         logger.error(f"Fallo de síntesis TTS para el incidente {incident_id}, se reintentará en el siguiente poll",
                      extra={"correlation_id": correlation_id}, exc_info=True)
+        incidents_model.record_failure(incident_id, "Fallo de síntesis TTS")
         return  # message_id sigue NULL: no es estado terminal, se reintenta
 
     speaker_ids = [t["id"] for t in targets]

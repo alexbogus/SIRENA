@@ -3,8 +3,14 @@
 propios del proyecto, sin copyright de terceros -- 16kHz/mono/16-bit, mismo
 formato que exige _protocol_sender.load_pcm_chunks. Se ejecuta una vez en
 desarrollo, no en cada arranque del contenedor -- el resultado se versiona
-en dashboard/static/audio/tones/. Las filas de la tabla `tones` correspondientes
-se siembran aparte, en db.py::init_db() (ver _DEFAULT_TONES).
+en docker/audio/ (montado como volumen en docker-compose.yml, ver
+docker/docker-compose.yml). Las filas de la tabla `tones` correspondientes se
+siembran aparte, en db.py::init_db() (ver _DEFAULT_TONES).
+
+De los 4 tonos originalmente generados aquí (clásico/urgente/suave/
+selectiva), tras escucharlos solo "urgente" se quedó -- generate_clasico/
+generate_suave/generate_selectiva se dejan sin usar en main() por si hace
+falta retomar alguno más adelante, pero no se llaman.
 
 Uso: python3 scripts/generate_tones.py
 """
@@ -14,7 +20,7 @@ import wave
 from pathlib import Path
 
 SAMPLE_RATE = 16000
-OUT_DIR = Path(__file__).resolve().parent.parent / "dashboard" / "static" / "audio" / "tones"
+OUT_DIR = Path(__file__).resolve().parent.parent / "audio"
 AMPLITUDE = 9000  # margen de sobra bajo el máximo de int16 (32767)
 
 
@@ -150,10 +156,7 @@ def generate_selectiva(path: Path) -> None:
 
 
 def main():
-    generate_clasico(OUT_DIR / "clasico.wav")
     generate_urgente(OUT_DIR / "urgente.wav")
-    generate_suave(OUT_DIR / "suave.wav")
-    generate_selectiva(OUT_DIR / "selectiva.wav")
 
 
 if __name__ == "__main__":

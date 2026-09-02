@@ -104,6 +104,11 @@ def build_alert_wav(
     if tone is None or not tone["enabled"]:
         tone = tones_model.get_default()
     tone_path = _TONES_DIR / tone["filename"]
+    if not tone_path.exists():
+        logger.warning(f"Tono {tone['name']!r} (id={tone['id']}) sin archivo en disco "
+                        f"({tone_path}), usando tono por defecto")
+        tone = tones_model.get_default()
+        tone_path = _TONES_DIR / tone["filename"]
 
     t0 = time.monotonic()
     speech_path = synthesize(text, voice=voice, speaker_id=speaker_id)

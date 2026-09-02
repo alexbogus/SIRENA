@@ -5,12 +5,16 @@ services:
       dockerfile: dashboard/Dockerfile
     network_mode: host
     volumes:
-      - ./dashboard/data:/app/data
-      - ./dashboard/logs:/app/logs
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Tonos de preámbulo subidos desde /settings: sin este volumen se
+      # pierden en cada rebuild/redeploy del contenedor (capa writable
+      # efímera) aunque la fila en la tabla `tones` sí persista en ./data.
+      - ./audio:/app/static/audio/tones
       # Compartido con piper: el dashboard descarga/elimina modelos de voz
       # aquí directamente (ver /settings -> "Modelos de voz"), piper solo
       # los lee de forma perezosa. Así piper no necesita salida a internet.
-      - ./piper/voices:/voices
+      - ./voices:/voices
     environment:
       - PIPER_URL=http://127.0.0.1:5100/synthesize
       - PIPER_VOICES_DIR=/voices
@@ -29,7 +33,7 @@ services:
     ports:
       - "127.0.0.1:5100:5100"
     volumes:
-      - ./piper/voices:/voices
+      - ./voices:/voices
     environment:
       - PIPER_VOICE_MODEL=/voices/es_ES-davefx-medium.onnx
     restart: unless-stopped

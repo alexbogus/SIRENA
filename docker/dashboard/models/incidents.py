@@ -39,8 +39,22 @@ def upsert_seen(incident_id: int, raw_description: str, municipio: str, now: str
 def mark_announced(incident_id: int, rule_id: int, message_id: int) -> None:
     with db_cursor() as cur:
         cur.execute(
-            "UPDATE processed_incidents SET matched_rule_id = ?, message_id = ? WHERE incident_id = ?",
+            "UPDATE processed_incidents SET matched_rule_id = ?, message_id = ?, failure_reason = NULL "
+            "WHERE incident_id = ?",
             (rule_id, message_id, incident_id),
+        )
+
+
+def record_failure(incident_id: int, reason: str) -> None:
+    """Deja constancia de que un incidente matcheó una regla pero falló al
+    anunciarse (TTS roto, sin altavoces, etc.), sin marcarlo como estado
+    terminal -- ver el guard de cv112_poller._process_feature, que usa este
+    campo para reintentar en el siguiente poll aunque last_raw_description no
+    haya cambiado."""
+    with db_cursor() as cur:
+        cur.execute(
+            "UPDATE processed_incidents SET failure_reason = ? WHERE incident_id = ?",
+            (reason, incident_id),
         )
 
 

@@ -21,6 +21,7 @@
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="rule_name">Regla <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="message_text">Mensaje <span class="sort-arrow"></span></th>
             <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="sent_at">Enviado <span class="sort-arrow"></span></th>
+            <th class="sort-col cursor-pointer select-none px-3 py-2" data-col="failure_reason">Estado <span class="sort-arrow"></span></th>
         </tr>
     </thead>
     <tbody id="alert-log-body" class="divide-y divide-white/5"></tbody>
@@ -43,6 +44,11 @@ function ruleBadge(ruleName) {
     return `<span class="text-slate-500">sin match</span>`;
 }
 
+function statusBadge(failureReason) {
+    if (failureReason) return `<span class="text-amber-400 inline-flex items-center gap-1"><i data-lucide="triangle-alert" class="w-3 h-3"></i>${failureReason}</span>`;
+    return `<span class="text-slate-500">—</span>`;
+}
+
 function filterEntries(entries) {
     const q = query.trim().toLowerCase();
     if (!q) return entries;
@@ -50,7 +56,8 @@ function filterEntries(entries) {
         (e.last_municipio || "").toLowerCase().includes(q) ||
         (e.last_raw_description || "").toLowerCase().includes(q) ||
         (e.rule_name || "").toLowerCase().includes(q) ||
-        (e.message_text || "").toLowerCase().includes(q)
+        (e.message_text || "").toLowerCase().includes(q) ||
+        (e.failure_reason || "").toLowerCase().includes(q)
     );
 }
 
@@ -69,12 +76,13 @@ function render() {
             <td class="px-3 py-2 text-xs">${ruleBadge(e.rule_name)}</td>
             <td class="px-3 py-2 text-xs max-w-xs truncate" title="${(e.message_text || '').replace(/"/g, '&quot;')}">${e.message_text || '—'}</td>
             <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">${e.sent_at || '—'}</td>
+            <td class="px-3 py-2 text-xs">${statusBadge(e.failure_reason)}</td>
         `;
         tbody.appendChild(tr);
     });
     if (rows.length === 0) {
         const msg = query.trim() ? "Sin incidentes que coincidan con la búsqueda." : "Sin incidentes registrados todavía.";
-        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">${msg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-6 text-center text-slate-500">${msg}</td></tr>`;
     }
     document.querySelectorAll(".sort-col").forEach(th => {
         const arrow = th.querySelector(".sort-arrow");
