@@ -287,6 +287,58 @@
         </button>
     </form>
 </div>
+
+<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
+    <div>
+        <h2 class="font-medium mb-1">Copias de seguridad</h2>
+        <p class="text-xs text-slate-500">
+            Copias de la base de datos (reglas, zonas, altavoces, historial). <code>update.sh</code> crea
+            una automáticamente antes de cada despliegue; aquí puedes crear una manual o restaurar
+            cualquiera de ellas. Restaurar hace antes una copia del estado actual (así también es
+            reversible) y reinicia la aplicación -- unos segundos de corte.
+        </p>
+    </div>
+
+    <div class="space-y-2">
+        {% for b in backups %}
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+            <div class="min-w-[140px]">
+                <div class="text-sm font-mono">{{ b.filename }}</div>
+                <div class="text-xs text-slate-500">{{ b.modified_at }} · {{ "%.1f"|format(b.size_bytes / 1048576) }} MB</div>
+            </div>
+            <form method="post" action="{{ url_for('settings.backups_restore', filename=b.filename) }}"
+                  data-confirm="¿Restaurar {{ b.filename }}? La aplicación se reiniciará y se perderá cualquier cambio posterior a esta copia."
+                  data-confirm-variant="danger">
+                <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                    <i data-lucide="history" class="w-3.5 h-3.5"></i> Restaurar
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">No hay copias de seguridad todavía.</p>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('settings.backups_create') }}" class="pt-2 border-t border-white/10">
+        <button class="btn btn-sm btn-ghost text-slate-300 gap-1.5">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i> Crear copia ahora
+        </button>
+    </form>
+
+    <form method="post" action="{{ url_for('settings.backups_upload_restore') }}" enctype="multipart/form-data"
+          class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap"
+          data-confirm="¿Restaurar la base de datos a partir de este archivo? La aplicación se reiniciará."
+          data-confirm-variant="danger">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-xs text-slate-400 mb-1">Restaurar desde un archivo .db</label>
+            <input type="file" name="file" accept=".db" required
+                   class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+        </div>
+        <button class="btn bg-red-600 hover:bg-red-700 text-white border-0 px-4 py-2 text-sm">
+            Restaurar
+        </button>
+    </form>
+</div>
 {% endblock %}
 
 {% block scripts %}

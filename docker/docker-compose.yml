@@ -20,6 +20,9 @@ services:
       # junto al README -- se monta de solo lectura para que el sidebar
       # (ver services/changelog.py) lo lea en caliente, sin rebuild.
       - ../CHANGELOG.md:/app/CHANGELOG.md:ro
+      # Copias de seguridad de la base de datos: update.sh (en el host) y
+      # /settings (dentro del contenedor) leen/escriben la misma carpeta.
+      - ./backups:/app/backups
     environment:
       - PIPER_URL=http://127.0.0.1:5100/synthesize
       - PIPER_VOICES_DIR=/voices

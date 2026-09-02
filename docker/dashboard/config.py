@@ -16,6 +16,13 @@ DB_PATH = Path(os.environ.get("DB_PATH", DATA_DIR / "dashboard.db"))
 # (ver services/changelog.py), así que basta con editar este archivo para
 # publicar una versión nueva, sin tocar código.
 CHANGELOG_PATH = Path(os.environ.get("CHANGELOG_PATH", BASE_DIR / "CHANGELOG.md"))
+# Copias de seguridad de la base de datos: docker/update.sh crea una antes
+# de cada despliegue (ver docker/update.sh::backup_db), y /settings permite
+# crear una manual o restaurar cualquiera (ver services/backup.py). Mismo
+# volumen visto por el host y por el contenedor (./backups:/app/backups en
+# docker-compose.yml), para que ambos operen sobre los mismos archivos.
+BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", BASE_DIR / "backups"))
+BACKUP_RETENTION_DAYS = int(os.environ.get("BACKUP_RETENTION_DAYS", "30"))
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
 

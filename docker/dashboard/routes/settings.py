@@ -1,5 +1,8 @@
+import os
 import subprocess
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
@@ -11,6 +14,7 @@ import models.settings as settings_model
 import models.tones as tones_model
 import models.voices as voices_model
 import services.audio_convert as audio_convert
+import services.backup as backup_service
 import services.voice_downloader as voice_downloader
 import services.voices_catalog as voices_catalog
 from routes.auth import login_required
@@ -56,6 +60,7 @@ def index():
         voices_catalog=voices_catalog.load_catalog(),
         installed_voice_keys=voices_catalog.installed_keys(),
         voice_downloads_running=voices_model.list_running_downloads(),
+        backups=backup_service.list_backups(),
     )
 
 
@@ -299,6 +304,76 @@ def templates_delete(template_id: int):
     logger.info(f"Plantilla eliminada: {template['name']!r}")
     flash("Plantilla eliminada.", "success")
     return redirect(url_for("settings.index"))
+
+
+@bp.route("/backups/create", methods=["POST"])
+@login_required
+def backups_create():
+    path = backup_service.create_backup()
+    logger.info(f"Backup manual creado: {path.name}")
+    flash(f"Copia de seguridad creada: {path.name}", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/backups/<filename>/restore", methods=["POST"])
+@login_required
+def backups_restore(filename: str):
+    path = (config.BACKUP_DIR / secure_filename(filename)).resolve()
+    if path.parent != config.BACKUP_DIR.resolve() or not path.is_file():
+        flash("Copia de seguridad no encontrada.", "error")
+        return redirect(url_for("settings.index"))
+
+    try:
+        backup_service.restore_from(path)
+    except backup_service.InvalidBackupError as exc:
+        flash(f"No se pudo restaurar: {exc}", "error")
+        return redirect(url_for("settings.index"))
+
+    logger.warning(f"Base de datos restaurada desde {filename!r}; reiniciando la aplicación")
+    flash("Copia restaurada. La aplicación se está reiniciando, espera unos segundos y recarga.", "success")
+    _schedule_restart()
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/backups/upload-restore", methods=["POST"])
+@login_required
+def backups_upload_restore():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        flash("Selecciona un archivo .db.", "error")
+        return redirect(url_for("settings.index"))
+    if not file.filename.lower().endswith(".db"):
+        flash("El archivo debe tener extensión .db.", "error")
+        return redirect(url_for("settings.index"))
+
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        file.save(tmp.name)
+        tmp_path = Path(tmp.name)
+    try:
+        backup_service.restore_from(tmp_path)
+    except backup_service.InvalidBackupError as exc:
+        flash(f"No se pudo restaurar: {exc}", "error")
+        return redirect(url_for("settings.index"))
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    logger.warning(f"Base de datos restaurada desde archivo subido ({file.filename!r}); reiniciando la aplicación")
+    flash("Copia restaurada. La aplicación se está reiniciando, espera unos segundos y recarga.", "success")
+    _schedule_restart()
+    return redirect(url_for("settings.index"))
+
+
+def _schedule_restart() -> None:
+    """Fuerza que el worker de gunicorn salga limpio un instante después de
+    responder, para que relea la base de datos restaurada desde cero
+    (incluida db.init_db(), que reaplica migraciones) y reinicie el
+    scheduler -- gunicorn (--workers 1, ver Dockerfile) respawnea un worker
+    nuevo automáticamente, sin intervención manual en el VPS."""
+    def _restart():
+        time.sleep(1.5)
+        os._exit(0)
+
+    threading.Thread(target=_restart, daemon=True).start()
 
 
 def _reschedule_poll_jobs(cv112_interval: int, status_interval: int) -> None:

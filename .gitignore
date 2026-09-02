@@ -34,5 +34,6 @@ docker/data/
 docker/logs/
 docker/dashboard/tts_assets/
 docker/voices/
+docker/backups/
 __pycache__/
 *.pyc

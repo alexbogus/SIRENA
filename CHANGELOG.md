@@ -4,6 +4,15 @@ Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speak
 
 La entrada más reciente (la primera de este archivo) es la que se muestra como versión actual en el pie del sidebar del dashboard — para publicar una versión nueva basta con añadir una sección `## [X.Y.Z] - AAAA-MM-DD` al principio de este archivo.
 
+## [1.5.0] - 2026-09-02
+
+### Añadido
+- Copias de seguridad de la base de datos con política de retención (no solo la última): `docker/update.sh` crea una automáticamente antes de cada despliegue (instala `sqlite3` con `apt` si hace falta; aborta el despliegue si no puede garantizar el backup) y las poda pasados `BACKUP_RETENTION_DAYS` días (30 por defecto).
+- `/settings → Copias de seguridad`: crear una copia manual, restaurar cualquiera de las existentes o restaurar subiendo un `.db` externo, con validación del archivo (cabecera SQLite + tablas esperadas) y backup de seguridad automático antes de aplicar cualquier restore.
+
+### Corregido
+- Motivado por un incidente real: un cambio de rutas de volúmenes Docker (ver 1.3.1) dejó el dashboard arrancando con una base de datos vacía en producción sin que el healthcheck (solo hace `SELECT 1`) lo detectara, porque `update.sh` nunca movía los datos del host a la ruta nueva. Los backups automáticos + la posibilidad de restaurar desde la propia app evitan que esto vuelva a suponer una pérdida de datos.
+
 ## [1.4.0] - 2026-09-02
 
 ### Añadido
