@@ -11,6 +11,7 @@ import db
 import models.settings as settings_model
 import models.voices as voices_model
 from scheduler import scheduler
+from services.changelog import current_version as changelog_current_version
 from services.cv112_poller import poll_once as cv112_poll_once
 from services.log_retention import run_once as log_retention_run_once
 from services.status_poller import poll_once as status_poll_once
@@ -32,6 +33,7 @@ def create_app() -> Flask:
     from routes.manual_send import bp as manual_send_bp
     from routes.rules import bp as rules_bp
     from routes.settings import bp as settings_bp
+    from routes.changelog import bp as changelog_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -40,6 +42,11 @@ def create_app() -> Flask:
     app.register_blueprint(manual_send_bp)
     app.register_blueprint(rules_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(changelog_bp)
+
+    @app.context_processor
+    def inject_app_version():
+        return {"app_version": changelog_current_version()}
 
     @app.get("/healthz")
     def healthz():

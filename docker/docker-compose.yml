@@ -15,6 +15,11 @@ services:
       # aquí directamente (ver /settings -> "Modelos de voz"), piper solo
       # los lee de forma perezosa. Así piper no necesita salida a internet.
       - ./voices:/voices
+      # CHANGELOG.md vive en la raíz del repo (fuera del build context, que
+      # es docker/) para que GitHub lo muestre de forma estándar y quede
+      # junto al README -- se monta de solo lectura para que el sidebar
+      # (ver services/changelog.py) lo lea en caliente, sin rebuild.
+      - ../CHANGELOG.md:/app/CHANGELOG.md:ro
     environment:
       - PIPER_URL=http://127.0.0.1:5100/synthesize
       - PIPER_VOICES_DIR=/voices

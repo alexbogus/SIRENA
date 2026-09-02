@@ -1,8 +1,15 @@
 # Changelog
 
-Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speaker/` y centro de mando `docker/dashboard/` — SIRENA). Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); sin versionado semántico numerado (proyecto interno sin releases), agrupado por fecha, más reciente primero.
+Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speaker/` y centro de mando `docker/dashboard/` — SIRENA). Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/), con [SemVer](https://semver.org/lang/es/) aplicado de forma laxa (proyecto interno sin releases publicados: MAJOR para rediseños/rupturas grandes, MINOR para funcionalidad nueva, PATCH para arreglos).
 
-## 2026-09-02
+La entrada más reciente (la primera de este archivo) es la que se muestra como versión actual en el pie del sidebar del dashboard — para publicar una versión nueva basta con añadir una sección `## [X.Y.Z] - AAAA-MM-DD` al principio de este archivo.
+
+## [1.4.0] - 2026-09-02
+
+### Añadido
+- El sidebar muestra la versión actual de la app en vez del texto fijo "Protección Civil Godella / Despliegue BRAVO 2"; al pulsarla se abre un modal con este mismo CHANGELOG renderizado, para hacer seguimiento de novedades sin salir del dashboard.
+
+## [1.3.1] - 2026-09-02
 
 ### Corregido
 - Un tono TTS ausente en disco ya no tumba la alerta completa: `services/tts.py` cae al tono por defecto y loguea un warning en vez de lanzar `FileNotFoundError`.
@@ -13,15 +20,17 @@ Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speak
 - Catálogo de tonos de preámbulo reducido a solo "Urgente" (Clásico/Suave/Selectiva no encajaban tras escucharlos); migración de retirada segura (deshabilita, no borra) para instalaciones ya desplegadas.
 - Convención de volúmenes Docker simplificada a rutas de un solo nivel bajo `docker/`: `./data`, `./logs`, `./audio`, `./voices`.
 
+## [1.3.0] - 2026-09-02
+
 ### Añadido
 - Columna "Población" y buscador por texto libre en el histórico de alertas (`/rules/log`).
 
-## 2026-09-01
+## [1.2.1] - 2026-09-01
 
 ### Añadido
 - Guía detallada de diseño (botones, formularios, modales, accesibilidad) para el sistema de diseño del dashboard.
 
-## 2026-08-31
+## [1.2.0] - 2026-08-31
 
 ### Añadido
 - Ajustes de síntesis de voz (TTS) y preview de voces Piper en `/settings`.
@@ -34,12 +43,12 @@ Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speak
 ### Cambiado
 - Modelo de voz de Piper horneado en la imagen Docker (con seed del volumen), eliminando la recarga por request; timing añadido al pipeline TTS.
 
-## 2026-08-30
+## [1.1.0] - 2026-08-30
 
 ### Cambiado
 - Piper aislado del exterior en `docker-compose` (solo accesible desde el dashboard vía loopback).
 
-## 2026-08-29
+## [1.0.0] - 2026-08-29
 
 ### Añadido — Firmware (`esp32s3-firmware/ip-speaker/`)
 - Hito 0: pinout real del hardware documentado a partir de la demo oficial de Waveshare.

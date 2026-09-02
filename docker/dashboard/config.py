@@ -10,6 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR / "data"))
 LOGS_DIR = Path(os.environ.get("LOGS_DIR", BASE_DIR / "logs"))
 DB_PATH = Path(os.environ.get("DB_PATH", DATA_DIR / "dashboard.db"))
+# CHANGELOG.md vive en la raíz del repo y se monta de solo lectura en
+# /app/CHANGELOG.md (ver docker-compose.yml) -- fuente única de verdad
+# tanto para el historial como para la versión mostrada en el sidebar
+# (ver services/changelog.py), así que basta con editar este archivo para
+# publicar una versión nueva, sin tocar código.
+CHANGELOG_PATH = Path(os.environ.get("CHANGELOG_PATH", BASE_DIR / "CHANGELOG.md"))
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
 

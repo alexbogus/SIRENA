@@ -133,6 +133,40 @@
         }
         .btn-brand:hover { background-color: #c65613; }
         .btn-brand:active { transform: scale(0.98); }
+
+        /* Contenido Markdown del CHANGELOG dentro del modal de novedades
+           (ver services/changelog.py + routes/changelog.py) -- sin plugin
+           tipografía de Tailwind, así que se estiliza a mano para que
+           encaje con el resto del tema navy/naranja. */
+        .changelog-content h1 { display: none; } /* título "# Changelog": redundante con el <h3> del modal */
+        .changelog-content h2 {
+            font-family: 'Barlow Condensed', system-ui, sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f2f2f1;
+            margin-top: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+        .changelog-content h2:first-of-type { margin-top: 0; }
+        .changelog-content h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: rgba(255, 178, 122, .8);
+            margin-top: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .changelog-content p { margin-bottom: 0.5rem; color: #a3a3a0; }
+        .changelog-content ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+        .changelog-content li { margin-bottom: 0.2rem; }
+        .changelog-content code {
+            background: rgba(255, 255, 255, .08);
+            padding: 0 4px;
+            border-radius: 4px;
+            font-size: .85em;
+        }
+        .changelog-content a { color: #f2711c; text-decoration: underline; }
     </style>
 </head>
 <body class="bg-navy-950 text-slate-100 min-h-screen font-sans">
@@ -195,8 +229,12 @@
                     </li>
                     {% endfor %}
                 </ul>
-                <div class="px-5 py-3 border-t border-white/10 text-[11px] text-slate-500 leading-tight">
-                    Protección Civil Godella<br>Despliegue BRAVO 2
+                <div class="px-5 py-3 border-t border-white/10">
+                    <button type="button" onclick="changelog_modal.showModal(); loadChangelogOnce();"
+                            class="inline-flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+                        <i data-lucide="sparkles" class="w-3 h-3"></i>
+                        SIRENA v{{ app_version }}
+                    </button>
                 </div>
                 <form method="post" action="{{ url_for('auth.logout') }}" class="px-3 pb-5">
                     <button class="btn btn-ghost btn-block justify-start gap-3 text-slate-400 hover:text-red-400">
@@ -220,7 +258,37 @@
         </div>
     </div>
 
+    <dialog id="changelog_modal" class="modal">
+        <div class="modal-box bg-navy-900 border border-white/10 max-w-2xl">
+            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+                <i data-lucide="sparkles" class="w-4 h-4 text-brand"></i> Novedades de SIRENA
+            </h3>
+            <div id="changelog-content" class="changelog-content max-h-[60vh] overflow-y-auto pr-2 text-sm text-slate-300">
+                <p class="text-slate-500">Cargando…</p>
+            </div>
+            <div class="modal-action pt-4">
+                <button type="button" onclick="changelog_modal.close()" class="btn btn-sm btn-ghost">Cerrar</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+    </dialog>
+
     <script>lucide.createIcons();</script>
+    <script>
+    let changelogLoaded = false;
+    function loadChangelogOnce() {
+        if (changelogLoaded) return;
+        changelogLoaded = true;
+        fetch("{{ url_for('changelog.content') }}")
+            .then(r => r.ok ? r.text() : Promise.reject())
+            .then(html => { document.getElementById("changelog-content").innerHTML = html; })
+            .catch(() => {
+                changelogLoaded = false;
+                document.getElementById("changelog-content").innerHTML =
+                    '<p class="text-red-400">No se pudo cargar el CHANGELOG.</p>';
+            });
+    }
+    </script>
     <script>
     (function () {
         // Modal de confirmación genérico: cualquier <form data-confirm="texto">
