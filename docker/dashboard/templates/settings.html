@@ -1,348 +1,406 @@
 {% extends "base.html" %}
 {% from "_badge.html" import badge %}
-{% from "_page_header.html" import page_header %}
 {% from "_select.html" import select_dropdown %}
 {% block title %}Configuración{% endblock %}
 {% block content %}
-{{ page_header("CONFIGURACIÓN", "Configuración") }}
+{# Solo la etiqueta, sin el <h1> "Configuración" -- redundante con el nombre
+   de la sección "Configuración" del sidebar, ya visible en todo momento. #}
+<div class="eyebrow mb-6">CONFIGURACIÓN</div>
 
-<form method="post" action="{{ url_for('settings.save') }}" class="bg-navy-900 border border-white/10 rounded-xl p-4 space-y-6 max-w-lg">
-    <div>
-        <h2 class="font-medium mb-3">Intervalos de sondeo</h2>
-        <div class="space-y-3">
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Lectura del feed del 112CV (segundos)</label>
-                <input type="number" name="cv112_poll_interval_s" value="{{ cv112_poll_interval_s }}"
-                       min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Sondeo de /status de los altavoces (segundos)</label>
-                <input type="number" name="status_poll_interval_s" value="{{ status_poll_interval_s }}"
-                       min="{{ min_poll }}" max="{{ max_poll }}"
-                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
-            </div>
-        </div>
+{% set _settings_tabs = [
+    ("sondeo-retencion-voz", "Sondeo, retención y voz"),
+    ("modelos-voz", "Modelos de voz"),
+    ("tonos", "Tonos"),
+    ("plantillas", "Plantillas rápidas"),
+    ("copias-seguridad", "Copias de seguridad"),
+] %}
+
+<div>
+
+    <!-- Pestañas: solo un panel visible a la vez (misma idea que el
+         acordeón exclusivo, pero como fila horizontal en vez de tarjetas
+         apiladas). El panel activo se recuerda en sessionStorage porque
+         cada acción dentro de una pestaña (descargar voz, subir tono, crear
+         copia...) hace un POST que recarga la página entera -- sin esto,
+         perdería siempre la pestaña en la que se estaba trabajando.
+         max-w-3xl (más ancho que las tarjetas de abajo, que se quedan en
+         max-w-lg) es lo justo para que las 5 pestañas quepan en una sola
+         fila en pantallas de escritorio -- en móvil, sin ese ancho
+         disponible, siguen pasando a una segunda línea con flex-wrap. -->
+    <div role="tablist" class="flex flex-wrap gap-x-1 border-b border-white/10 mb-6 max-w-3xl">
+        {% for tab_id, label in _settings_tabs %}
+        <button type="button" role="tab" data-settings-tab="{{ tab_id }}"
+                class="settings-tab whitespace-nowrap px-3.5 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 -mb-px">
+            {{ label }}
+        </button>
+        {% endfor %}
     </div>
 
-    <div>
-        <h2 class="font-medium mb-3">Retención de datos</h2>
-        <p class="text-xs text-slate-500 mb-3">
-            Se purgan automáticamente una vez al día. Solo afecta a mensajes enviados, errores de
-            altavoz y auditoría de altavoces/zonas -- no se guarda un log de los eventos del 112CV,
-            solo el estado técnico de deduplicación (con su propio período, ver abajo).
-        </p>
-        <div class="space-y-3">
+    <div data-settings-panel="sondeo-retencion-voz" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4">
+        <form method="post" action="{{ url_for('settings.save') }}" class="space-y-6">
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) - días</label>
-                <input type="number" name="db_log_retention_days" value="{{ db_log_retention_days }}"
-                       min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
+                <h2 class="font-medium mb-3">Intervalos de sondeo</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Lectura del feed del 112CV (segundos)</label>
+                        <input type="number" name="cv112_poll_interval_s" value="{{ cv112_poll_interval_s }}"
+                               min="{{ min_poll }}" max="{{ max_poll }}"
+                               class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Sondeo de /status de los altavoces (segundos)</label>
+                        <input type="number" name="status_poll_interval_s" value="{{ status_poll_interval_s }}"
+                               min="{{ min_poll }}" max="{{ max_poll }}"
+                               class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV - días</label>
-                <input type="number" name="dedupe_retention_days" value="{{ dedupe_retention_days }}"
-                       min="{{ min_retention }}" max="{{ max_retention }}"
-                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
-            </div>
-        </div>
-    </div>
 
-    <div>
-        <h2 class="font-medium mb-3">Voz (Text-to-Speech)</h2>
-        <div class="space-y-3">
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Voz</label>
-                {% set _voice_opts = [] %}
-                {% set _ns_voice = namespace(selected="") %}
-                {% for v in tts_voices %}
-                {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
-                {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
-                {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}{% set _ns_voice.selected = _value %}{% endif %}
-                {% endfor %}
-                {{ select_dropdown("tts_voice_choice", _voice_opts, selected_value=_ns_voice.selected) }}
+                <h2 class="font-medium mb-3">Retención de datos</h2>
+                <p class="text-xs text-slate-500 mb-3">
+                    Se purgan automáticamente una vez al día. Solo afecta a mensajes enviados, errores de
+                    altavoz y auditoría de altavoces/zonas -- no se guarda un log de los eventos del 112CV,
+                    solo el estado técnico de deduplicación (con su propio período, ver abajo).
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Logs (mensajes, errores, auditoría) - días</label>
+                        <input type="number" name="db_log_retention_days" value="{{ db_log_retention_days }}"
+                               min="{{ min_retention }}" max="{{ max_retention }}"
+                               class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Estado de deduplicación de incidentes 112CV - días</label>
+                        <input type="number" name="dedupe_retention_days" value="{{ dedupe_retention_days }}"
+                               min="{{ min_retention }}" max="{{ max_retention }}"
+                               class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
+                    </div>
+                </div>
             </div>
+
             <div>
-                <label class="block text-xs text-slate-400 mb-1">
-                    Velocidad de lectura ({{ tts_length_scale }}x, más alto = más lento)
-                </label>
-                <input type="range" name="tts_length_scale" value="{{ tts_length_scale }}"
-                       min="{{ min_length_scale }}" max="{{ max_length_scale }}" step="0.05"
-                       class="w-full">
+                <h2 class="font-medium mb-3">Voz (Text-to-Speech)</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Voz</label>
+                        {% set _voice_opts = [] %}
+                        {% set _ns_voice = namespace(selected="") %}
+                        {% for v in tts_voices %}
+                        {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
+                        {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
+                        {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}{% set _ns_voice.selected = _value %}{% endif %}
+                        {% endfor %}
+                        {{ select_dropdown("tts_voice_choice", _voice_opts, selected_value=_ns_voice.selected) }}
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            Velocidad de lectura ({{ tts_length_scale }}x, más alto = más lento)
+                        </label>
+                        <input type="range" name="tts_length_scale" value="{{ tts_length_scale }}"
+                               min="{{ min_length_scale }}" max="{{ max_length_scale }}" step="0.05"
+                               class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            Expresividad ({{ tts_expressiveness }}, más alto = prosodia menos plana/robótica)
+                        </label>
+                        <input type="range" name="tts_expressiveness" value="{{ tts_expressiveness }}"
+                               min="{{ min_expressiveness }}" max="{{ max_expressiveness }}" step="0.05"
+                               class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            Pausa entre frases ({{ tts_sentence_silence }}s)
+                        </label>
+                        <input type="range" name="tts_sentence_silence" value="{{ tts_sentence_silence }}"
+                               min="{{ min_sentence_silence }}" max="{{ max_sentence_silence }}" step="0.05"
+                               class="w-full">
+                    </div>
+                    <button type="button" id="tts-preview-btn"
+                            class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
+                        <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
+                        <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
+                        <span id="tts-preview-label">Probar voz</span>
+                    </button>
+                    <p class="text-xs text-slate-500">
+                        "Probar voz" reproduce un aviso de ejemplo con la voz guardada actualmente --
+                        guarda los cambios de arriba antes de probarlos.
+                    </p>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">
-                    Expresividad ({{ tts_expressiveness }}, más alto = prosodia menos plana/robótica)
-                </label>
-                <input type="range" name="tts_expressiveness" value="{{ tts_expressiveness }}"
-                       min="{{ min_expressiveness }}" max="{{ max_expressiveness }}" step="0.05"
-                       class="w-full">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">
-                    Pausa entre frases ({{ tts_sentence_silence }}s)
-                </label>
-                <input type="range" name="tts_sentence_silence" value="{{ tts_sentence_silence }}"
-                       min="{{ min_sentence_silence }}" max="{{ max_sentence_silence }}" step="0.05"
-                       class="w-full">
-            </div>
-            <button type="button" id="tts-preview-btn"
-                    class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1">
-                <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
-                <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
-                <span id="tts-preview-label">Probar voz</span>
+
+            <button class="btn-brand px-4 py-2 text-sm">
+                Guardar
             </button>
-            <p class="text-xs text-slate-500">
-                "Probar voz" reproduce un aviso de ejemplo con la voz guardada actualmente --
-                guarda los cambios de arriba antes de probarlos.
-            </p>
-        </div>
+        </form>
     </div>
 
-    <button class="btn-brand px-4 py-2 text-sm">
-        Guardar
-    </button>
-</form>
-
-<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
-    <div>
-        <h2 class="font-medium mb-1">Modelos de voz</h2>
+    <div data-settings-panel="modelos-voz" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4 space-y-4">
         <p class="text-xs text-slate-500">
             Voces Piper instaladas y catálogo de voces en español descargables desde Hugging Face
             (rhasspy/piper-voices), con verificación de integridad (tamaño + MD5).
         </p>
-    </div>
 
-    <div>
-        <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Instaladas</h3>
-        <div class="space-y-2">
-            {% for v in tts_voices %}
-            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
-                <div class="flex items-center gap-2 min-w-[140px]">
-                    <span class="text-sm">{{ v.label }}</span>
-                    <span class="text-xs text-slate-500">{{ v.language_code }} · {{ "%.0f"|format(v.size_bytes / 1048576) }} MB</span>
-                    {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}
-                    {{ badge('en uso', 'success') }}
-                    {% endif %}
-                </div>
-                {% if not (v.filename == tts_voice and v.speaker_id == tts_speaker_id) %}
-                <form method="post" action="{{ url_for('settings.voices_delete', filename=v.filename) }}"
-                      data-confirm="¿Eliminar la voz {{ v.label }}?" data-confirm-variant="danger">
-                    <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-            {% else %}
-            <p class="text-slate-500 text-sm">No hay voces instaladas.</p>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div class="pt-2 border-t border-white/10">
-        <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Catálogo descargable (español)</h3>
-        <div class="space-y-2">
-            {% for c in voices_catalog %}
-            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
-                <div class="flex items-center gap-2 min-w-[140px]">
-                    <span class="text-sm">{{ c.key }}</span>
-                    <span class="text-xs text-slate-500">{{ c.quality }} · {{ "%.0f"|format(c.size_bytes / 1048576) }} MB</span>
-                </div>
-                {% if c.key in installed_voice_keys %}
-                {{ badge('instalada', 'success') }}
-                {% else %}
-                <div class="flex items-center gap-2 shrink-0">
-                    <span id="voice-status-{{ c.key }}" class="text-xs text-slate-500"
-                        {% if c.key in voice_downloads_running %}data-polling="1"{% endif %}>
-                        {{ "Descargando..." if c.key in voice_downloads_running else "" }}
-                    </span>
-                    <form method="post" action="{{ url_for('settings.voices_download', voice_key=c.key) }}">
-                        <button class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
-                                {% if c.key in voice_downloads_running %}disabled{% endif %}>
-                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
+        <div>
+            <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Instaladas</h3>
+            <div class="space-y-2">
+                {% for v in tts_voices %}
+                <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                    <div class="flex items-center gap-2 min-w-[140px]">
+                        <span class="text-sm">{{ v.label }}</span>
+                        <span class="text-xs text-slate-500">{{ v.language_code }} · {{ "%.0f"|format(v.size_bytes / 1048576) }} MB</span>
+                        {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}
+                        {{ badge('en uso', 'success') }}
+                        {% endif %}
+                    </div>
+                    {% if not (v.filename == tts_voice and v.speaker_id == tts_speaker_id) %}
+                    <form method="post" action="{{ url_for('settings.voices_delete', filename=v.filename) }}"
+                          data-confirm="¿Eliminar la voz {{ v.label }}?" data-confirm-variant="danger">
+                        <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
                         </button>
                     </form>
+                    {% endif %}
                 </div>
-                {% endif %}
+                {% else %}
+                <p class="text-slate-500 text-sm">No hay voces instaladas.</p>
+                {% endfor %}
             </div>
-            {% else %}
-            <p class="text-slate-500 text-sm">No hay voces en el catálogo.</p>
-            {% endfor %}
+        </div>
+
+        <div class="pt-2 border-t border-white/10">
+            <h3 class="text-xs uppercase tracking-wide text-slate-500 mb-2">Catálogo descargable (español)</h3>
+            <div class="space-y-2">
+                {% for c in voices_catalog %}
+                <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                    <div class="flex items-center gap-2 min-w-[140px]">
+                        <span class="text-sm">{{ c.key }}</span>
+                        <span class="text-xs text-slate-500">{{ c.quality }} · {{ "%.0f"|format(c.size_bytes / 1048576) }} MB</span>
+                    </div>
+                    {% if c.key in installed_voice_keys %}
+                    {{ badge('instalada', 'success') }}
+                    {% else %}
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span id="voice-status-{{ c.key }}" class="text-xs text-slate-500"
+                            {% if c.key in voice_downloads_running %}data-polling="1"{% endif %}>
+                            {{ "Descargando..." if c.key in voice_downloads_running else "" }}
+                        </span>
+                        <form method="post" action="{{ url_for('settings.voices_download', voice_key=c.key) }}">
+                            <button class="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
+                                    {% if c.key in voice_downloads_running %}disabled{% endif %}>
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-slate-500 text-sm">No hay voces en el catálogo.</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
-</div>
 
-<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
-    <div>
-        <h2 class="font-medium mb-1">Tonos</h2>
+    <div data-settings-panel="tonos" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4 space-y-4">
         <p class="text-xs text-slate-500">
             Preámbulo sonoro que se antepone a la voz en cada aviso. El tono por defecto se usa en
             envíos manuales y en las reglas 112CV que no tengan un tono propio asignado (ver /rules).
         </p>
+
+        <div class="space-y-2">
+            {% for t in tones %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2 min-w-[140px]">
+                    <span class="text-sm">{{ t.name }}</span>
+                    {% if t.is_default %}
+                    {{ badge('por defecto', 'info') }}
+                    {% endif %}
+                    {{ badge('habilitado', 'success') if t.enabled else badge('deshabilitado', 'neutral') }}
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                    <button type="button" class="tone-play text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
+                            data-src="{{ url_for('static', filename='audio/tones/' + t.filename) }}">
+                        <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
+                        <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
+                        Escuchar
+                    </button>
+                    {% if not t.is_default %}
+                    <form method="post" action="{{ url_for('settings.tones_default', tone_id=t.id) }}">
+                        <button class="text-sky-400 hover:text-sky-300 text-xs flex items-center gap-1">
+                            <i data-lucide="star" class="w-3.5 h-3.5"></i> Por defecto
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('settings.tones_toggle', tone_id=t.id) }}"
+                          data-confirm="¿{{ 'Deshabilitar' if t.enabled else 'Habilitar' }} el tono {{ t.name }}?">
+                        <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                            <i data-lucide="{{ 'pause-circle' if t.enabled else 'play-circle' }}" class="w-3.5 h-3.5"></i>
+                            {{ 'Deshabilitar' if t.enabled else 'Habilitar' }}
+                        </button>
+                    </form>
+                    <form method="post" action="{{ url_for('settings.tones_delete', tone_id=t.id) }}"
+                          data-confirm="¿Eliminar el tono {{ t.name }}?" data-confirm-variant="danger">
+                        <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay tonos creados todavía.</p>
+            {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('settings.tones_upload') }}" enctype="multipart/form-data"
+              class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap">
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+                <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div class="flex-1 min-w-[160px]">
+                <label class="block text-xs text-slate-400 mb-1">Archivo (.wav o .mp3)</label>
+                <input type="file" name="file" accept="audio/wav,.wav,audio/mpeg,.mp3" required
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+            </div>
+            <button class="btn-brand px-4 py-2 text-sm">
+                Subir
+            </button>
+        </form>
+        <audio id="tone-player" class="hidden"></audio>
     </div>
 
-    <div class="space-y-2">
-        {% for t in tones %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
-            <div class="flex items-center gap-2 min-w-[140px]">
-                <span class="text-sm">{{ t.name }}</span>
-                {% if t.is_default %}
-                {{ badge('por defecto', 'info') }}
-                {% endif %}
-                {{ badge('habilitado', 'success') if t.enabled else badge('deshabilitado', 'neutral') }}
-            </div>
-            <div class="flex items-center gap-3 shrink-0">
-                <button type="button" class="tone-play text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
-                        data-src="{{ url_for('static', filename='audio/tones/' + t.filename) }}">
-                    <i data-lucide="play" class="icon-play w-3.5 h-3.5"></i>
-                    <i data-lucide="pause" class="icon-pause w-3.5 h-3.5 hidden"></i>
-                    Escuchar
-                </button>
-                {% if not t.is_default %}
-                <form method="post" action="{{ url_for('settings.tones_default', tone_id=t.id) }}">
-                    <button class="text-sky-400 hover:text-sky-300 text-xs flex items-center gap-1">
-                        <i data-lucide="star" class="w-3.5 h-3.5"></i> Por defecto
-                    </button>
-                </form>
-                {% endif %}
-                <form method="post" action="{{ url_for('settings.tones_toggle', tone_id=t.id) }}"
-                      data-confirm="¿{{ 'Deshabilitar' if t.enabled else 'Habilitar' }} el tono {{ t.name }}?">
-                    <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
-                        <i data-lucide="{{ 'pause-circle' if t.enabled else 'play-circle' }}" class="w-3.5 h-3.5"></i>
-                        {{ 'Deshabilitar' if t.enabled else 'Habilitar' }}
-                    </button>
-                </form>
-                <form method="post" action="{{ url_for('settings.tones_delete', tone_id=t.id) }}"
-                      data-confirm="¿Eliminar el tono {{ t.name }}?" data-confirm-variant="danger">
+    <div data-settings-panel="plantillas" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4 space-y-4">
+        <p class="text-xs text-slate-500">
+            Textos predefinidos disponibles con un clic en el formulario de envío manual (/send).
+        </p>
+
+        <div class="space-y-2">
+            {% for t in templates %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="min-w-[140px]">
+                    <div class="text-sm">{{ t.name }}</div>
+                    <div class="text-xs text-slate-500 truncate max-w-xs">{{ t.text }}</div>
+                </div>
+                <form method="post" action="{{ url_for('settings.templates_delete', template_id=t.id) }}"
+                      data-confirm="¿Eliminar la plantilla {{ t.name }}?" data-confirm-variant="danger">
                     <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
                     </button>
                 </form>
             </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay plantillas creadas todavía.</p>
+            {% endfor %}
         </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">No hay tonos creados todavía.</p>
-        {% endfor %}
-    </div>
 
-    <form method="post" action="{{ url_for('settings.tones_upload') }}" enctype="multipart/form-data"
-          class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap">
-        <div class="flex-1 min-w-[140px]">
-            <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div class="flex-1 min-w-[160px]">
-            <label class="block text-xs text-slate-400 mb-1">Archivo (.wav o .mp3)</label>
-            <input type="file" name="file" accept="audio/wav,.wav,audio/mpeg,.mp3" required
-                   class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
-        </div>
-        <button class="btn-brand px-4 py-2 text-sm">
-            Subir
-        </button>
-    </form>
-    <audio id="tone-player" class="hidden"></audio>
-</div>
-
-<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
-    <div>
-        <h2 class="font-medium mb-1">Plantillas rápidas</h2>
-        <p class="text-xs text-slate-500">
-            Textos predefinidos disponibles con un clic en el formulario de envío manual (/send).
-        </p>
-    </div>
-
-    <div class="space-y-2">
-        {% for t in templates %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
-            <div class="min-w-[140px]">
-                <div class="text-sm">{{ t.name }}</div>
-                <div class="text-xs text-slate-500 truncate max-w-xs">{{ t.text }}</div>
+        <form method="post" action="{{ url_for('settings.templates_create') }}"
+              class="space-y-2 pt-2 border-t border-white/10">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+                <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
             </div>
-            <form method="post" action="{{ url_for('settings.templates_delete', template_id=t.id) }}"
-                  data-confirm="¿Eliminar la plantilla {{ t.name }}?" data-confirm-variant="danger">
-                <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-                </button>
-            </form>
-        </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">No hay plantillas creadas todavía.</p>
-        {% endfor %}
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Texto</label>
+                <textarea name="text" required rows="2"
+                          class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm"></textarea>
+            </div>
+            <button class="btn-brand px-4 py-2 text-sm">
+                Añadir plantilla
+            </button>
+        </form>
     </div>
 
-    <form method="post" action="{{ url_for('settings.templates_create') }}"
-          class="space-y-2 pt-2 border-t border-white/10">
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">Nombre</label>
-            <input name="name" required class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-            <label class="block text-xs text-slate-400 mb-1">Texto</label>
-            <textarea name="text" required rows="2"
-                      class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm"></textarea>
-        </div>
-        <button class="btn-brand px-4 py-2 text-sm">
-            Añadir plantilla
-        </button>
-    </form>
-</div>
-
-<div class="bg-navy-900 border border-white/10 rounded-xl p-4 mt-6 max-w-lg space-y-4">
-    <div>
-        <h2 class="font-medium mb-1">Copias de seguridad</h2>
+    <div data-settings-panel="copias-seguridad" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4 space-y-4">
         <p class="text-xs text-slate-500">
             Copias de la base de datos (reglas, zonas, altavoces, historial). <code>update.sh</code> crea
             una automáticamente antes de cada despliegue; aquí puedes crear una manual o restaurar
             cualquiera de ellas. Restaurar hace antes una copia del estado actual (así también es
             reversible) y reinicia la aplicación -- unos segundos de corte.
         </p>
-    </div>
 
-    <div class="space-y-2">
-        {% for b in backups %}
-        <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
-            <div class="min-w-[140px]">
-                <div class="text-sm font-mono">{{ b.filename }}</div>
-                <div class="text-xs text-slate-500">{{ b.modified_at }} · {{ "%.1f"|format(b.size_bytes / 1048576) }} MB</div>
+        <div class="space-y-2">
+            {% for b in backups %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="min-w-[140px]">
+                    <div class="text-sm font-mono">{{ b.filename }}</div>
+                    <div class="text-xs text-slate-500">{{ b.modified_at }} · {{ "%.1f"|format(b.size_bytes / 1048576) }} MB</div>
+                </div>
+                <form method="post" action="{{ url_for('settings.backups_restore', filename=b.filename) }}"
+                      data-confirm="¿Restaurar {{ b.filename }}? La aplicación se reiniciará y se perderá cualquier cambio posterior a esta copia."
+                      data-confirm-variant="danger">
+                    <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                        <i data-lucide="history" class="w-3.5 h-3.5"></i> Restaurar
+                    </button>
+                </form>
             </div>
-            <form method="post" action="{{ url_for('settings.backups_restore', filename=b.filename) }}"
-                  data-confirm="¿Restaurar {{ b.filename }}? La aplicación se reiniciará y se perderá cualquier cambio posterior a esta copia."
-                  data-confirm-variant="danger">
-                <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
-                    <i data-lucide="history" class="w-3.5 h-3.5"></i> Restaurar
-                </button>
-            </form>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay copias de seguridad todavía.</p>
+            {% endfor %}
         </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">No hay copias de seguridad todavía.</p>
-        {% endfor %}
+
+        <form method="post" action="{{ url_for('settings.backups_create') }}" class="pt-2 border-t border-white/10">
+            <button class="btn btn-sm btn-ghost text-slate-300 gap-1.5">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i> Crear copia ahora
+            </button>
+        </form>
+
+        <form method="post" action="{{ url_for('settings.backups_upload_restore') }}" enctype="multipart/form-data"
+              class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap"
+              data-confirm="¿Restaurar la base de datos a partir de este archivo? La aplicación se reiniciará."
+              data-confirm-variant="danger">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs text-slate-400 mb-1">Restaurar desde un archivo .db</label>
+                <input type="file" name="file" accept=".db" required
+                       class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+            </div>
+            <button class="btn bg-red-600 hover:bg-red-700 text-white border-0 px-4 py-2 text-sm">
+                Restaurar
+            </button>
+        </form>
     </div>
 
-    <form method="post" action="{{ url_for('settings.backups_create') }}" class="pt-2 border-t border-white/10">
-        <button class="btn btn-sm btn-ghost text-slate-300 gap-1.5">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Crear copia ahora
-        </button>
-    </form>
-
-    <form method="post" action="{{ url_for('settings.backups_upload_restore') }}" enctype="multipart/form-data"
-          class="flex gap-2 items-end pt-2 border-t border-white/10 flex-wrap"
-          data-confirm="¿Restaurar la base de datos a partir de este archivo? La aplicación se reiniciará."
-          data-confirm-variant="danger">
-        <div class="flex-1 min-w-[200px]">
-            <label class="block text-xs text-slate-400 mb-1">Restaurar desde un archivo .db</label>
-            <input type="file" name="file" accept=".db" required
-                   class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
-        </div>
-        <button class="btn bg-red-600 hover:bg-red-700 text-white border-0 px-4 py-2 text-sm">
-            Restaurar
-        </button>
-    </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+(function () {
+    // Pestañas exclusivas: un solo panel visible a la vez. Se recuerda la
+    // pestaña activa en sessionStorage porque cada acción dentro de un
+    // panel (descargar voz, subir tono, crear copia...) hace un POST que
+    // recarga la página entera -- sin esto, siempre volvería a la primera
+    // pestaña y se perdería el contexto de en qué sección estaba el usuario.
+    const STORAGE_KEY = "settings-active-tab";
+    const tabs = Array.from(document.querySelectorAll("[data-settings-tab]"));
+    const panels = Array.from(document.querySelectorAll("[data-settings-panel]"));
+    if (!tabs.length) return;
+
+    function activate(tabId) {
+        const exists = tabs.some(t => t.dataset.settingsTab === tabId);
+        const target = exists ? tabId : tabs[0].dataset.settingsTab;
+        tabs.forEach(t => {
+            const active = t.dataset.settingsTab === target;
+            t.classList.toggle("text-white", active);
+            t.classList.toggle("border-brand", active);
+            t.classList.toggle("text-slate-400", !active);
+            t.classList.toggle("border-transparent", !active);
+        });
+        panels.forEach(p => p.classList.toggle("hidden", p.dataset.settingsPanel !== target));
+        sessionStorage.setItem(STORAGE_KEY, target);
+
+        // Tras un POST + recarga la barra de pestañas siempre vuelve a su
+        // scroll horizontal inicial (0): sin esto, la pestaña activa
+        // recordada de sessionStorage podría quedar fuera de la vista y
+        // parecer que "se perdió" aunque el panel correcto sí se muestre.
+        const activeTab = tabs.find(t => t.dataset.settingsTab === target);
+        if (activeTab) activeTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+
+    tabs.forEach(t => t.addEventListener("click", () => activate(t.dataset.settingsTab)));
+    activate(sessionStorage.getItem(STORAGE_KEY) || tabs[0].dataset.settingsTab);
+})();
+
 (function () {
     // lucide.createIcons() sustituye cada <i data-lucide> por un <svg>, así
     // que no se puede volver a tocar por su tag "i" en clics posteriores
