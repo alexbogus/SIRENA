@@ -30,8 +30,13 @@ cmake_install.cmake
 CMakeLists.txt.user
 
 # --- Centro de mando Docker (docker/dashboard, docker/piper) ---
+# docker/data + docker/logs: rutas usadas en despliegue (montadas por
+# docker-compose.yml). docker/dashboard/data + docker/dashboard/logs:
+# defaults de config.py cuando la app se ejecuta localmente sin Docker.
 docker/data/
 docker/logs/
+docker/dashboard/data/
+docker/dashboard/logs/
 docker/dashboard/tts_assets/
 docker/voices/
 docker/backups/
