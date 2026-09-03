@@ -84,13 +84,13 @@
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Voz</label>
-                        {% set _voice_opts = [] %}
-                        {% set _ns_voice = namespace(selected="") %}
+                        {% set _ns_voice = namespace(selected="", opts=[]) %}
                         {% for v in tts_voices %}
                         {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
-                        {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
+                        {% set _ns_voice.opts = _ns_voice.opts + [{"value": _value, "label": v.label}] %}
                         {% if v.filename == tts_voice and v.speaker_id == tts_speaker_id %}{% set _ns_voice.selected = _value %}{% endif %}
                         {% endfor %}
+                        {% set _voice_opts = _ns_voice.opts %}
                         {{ select_dropdown("tts_voice_choice", _voice_opts, selected_value=_ns_voice.selected) }}
                     </div>
                     <div>

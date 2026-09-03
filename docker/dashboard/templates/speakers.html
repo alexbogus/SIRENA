@@ -33,8 +33,9 @@
         <div class="flex items-center gap-2 shrink-0">
             <i data-lucide="filter" class="w-4 h-4 text-slate-500"></i>
             <div class="min-w-[180px]">
-                {% set _zone_filter_opts = [{"value": "", "label": "Todas las zonas"}] %}
-                {% for z in zones %}{% set _zone_filter_opts = _zone_filter_opts + [{"value": z.id, "label": z.name}] %}{% endfor %}
+                {% set _zfns = namespace(items=[{"value": "", "label": "Todas las zonas"}]) %}
+                {% for z in zones %}{% set _zfns.items = _zfns.items + [{"value": z.id, "label": z.name}] %}{% endfor %}
+                {% set _zone_filter_opts = _zfns.items %}
                 {{ select_dropdown("zone_filter", _zone_filter_opts, selected_value="", id="zone-filter", size="sm") }}
             </div>
         </div>

@@ -22,14 +22,16 @@
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Destino</label>
-        {% set _zone_opts = [{"value": "", "label": "Todos los altavoces"}] %}
-        {% for z in zones %}{% set _zone_opts = _zone_opts + [{"value": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
+        {% set _zns3 = namespace(items=[{"value": "", "label": "Todos los altavoces"}]) %}
+        {% for z in zones %}{% set _zns3.items = _zns3.items + [{"value": z.id, "label": z.name ~ (' (deshabilitada)' if not z.enabled else '')}] %}{% endfor %}
+        {% set _zone_opts = _zns3.items %}
         {{ select_dropdown("target_zone_id", _zone_opts, selected_value=(r.target_zone_id if editing and r.target_zone_id else "")) }}
     </div>
     <div>
         <label class="block text-xs text-slate-400 mb-1">Tono</label>
-        {% set _tone_opts = [{"value": "", "label": "Tono por defecto"}] %}
-        {% for t in tones %}{% set _tone_opts = _tone_opts + [{"value": t.id, "label": t.name}] %}{% endfor %}
+        {% set _tns = namespace(items=[{"value": "", "label": "Tono por defecto"}]) %}
+        {% for t in tones %}{% set _tns.items = _tns.items + [{"value": t.id, "label": t.name}] %}{% endfor %}
+        {% set _tone_opts = _tns.items %}
         {{ select_dropdown("tone_id", _tone_opts, selected_value=(r.tone_id if editing and r.tone_id else "")) }}
     </div>
     <label class="flex items-center gap-2 text-sm">

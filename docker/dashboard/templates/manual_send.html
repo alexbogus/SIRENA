@@ -4,10 +4,12 @@
 {% from "_badge.html" import badge %}
 {% block title %}Enviar mensaje{% endblock %}
 {% block content %}
-{% set _zone_items = [] %}
-{% for z in zones %}{% set _zone_items = _zone_items + [{"id": z.id, "label": z.name}] %}{% endfor %}
-{% set _speaker_items = [] %}
-{% for sp in speakers if sp.enabled %}{% set _speaker_items = _speaker_items + [{"id": sp.id, "label": sp.name}] %}{% endfor %}
+{% set _zone_ns = namespace(items=[]) %}
+{% for z in zones %}{% set _zone_ns.items = _zone_ns.items + [{"id": z.id, "label": z.name}] %}{% endfor %}
+{% set _zone_items = _zone_ns.items %}
+{% set _speaker_ns = namespace(items=[]) %}
+{% for sp in speakers if sp.enabled %}{% set _speaker_ns.items = _speaker_ns.items + [{"id": sp.id, "label": sp.name}] %}{% endfor %}
+{% set _speaker_items = _speaker_ns.items %}
 
 <div class="mb-6">
     <div class="eyebrow">ENVÍO MANUAL</div>
@@ -46,17 +48,19 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Tono de preámbulo</label>
-                        {% set _tone_opts = [{"value": "", "label": "Por defecto"}] %}
-                        {% for t in tones %}{% set _tone_opts = _tone_opts + [{"value": t.id, "label": t.name}] %}{% endfor %}
+                        {% set _tns2 = namespace(items=[{"value": "", "label": "Por defecto"}]) %}
+                        {% for t in tones %}{% set _tns2.items = _tns2.items + [{"value": t.id, "label": t.name}] %}{% endfor %}
+                        {% set _tone_opts = _tns2.items %}
                         {{ select_dropdown("tone_id", _tone_opts, selected_value="", id="tone-select", size="sm") }}
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Voz (solo preview)</label>
-                        {% set _voice_opts = [{"value": "", "label": "Por defecto"}] %}
+                        {% set _vns = namespace(items=[{"value": "", "label": "Por defecto"}]) %}
                         {% for v in tts_voices %}
                         {% set _value = v.filename ~ "|" ~ (v.speaker_id if v.speaker_id is not none else "") %}
-                        {% set _voice_opts = _voice_opts + [{"value": _value, "label": v.label}] %}
+                        {% set _vns.items = _vns.items + [{"value": _value, "label": v.label}] %}
                         {% endfor %}
+                        {% set _voice_opts = _vns.items %}
                         {{ select_dropdown("voice_choice", _voice_opts, selected_value="", id="voice-select", size="sm") }}
                     </div>
                     <div>
