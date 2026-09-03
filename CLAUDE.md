@@ -32,6 +32,13 @@ No unit test suite exists yet — verification is done by flashing to real hardw
 
 `main/wifi_credentials.h` (gitignored) must exist with `WIFI_SSID`/`WIFI_PASSWORD` defines before building for the first time — copy it from `main/wifi_credentials.h.example`. These are only fallback defaults for development; in normal operation credentials come from NVS (see below).
 
+**SIRENA dashboard**, from `docker/`:
+```bash
+docker compose up -d --build   # local dev / manual (re)deploy
+./update.sh                    # VPS deploy: git pull + build + up -d, with DB backup-before-touch and automatic rollback if the healthcheck fails
+```
+No test suite here either — the dashboard is verified by running it and exercising the UI/API against the real 112CV feed and a real speaker.
+
 ## Architecture
 
 **Firmware pipeline** (`main/ip-speaker.c` orchestrates `app_main()`):
@@ -42,6 +49,7 @@ No unit test suite exists yet — verification is done by flashing to real hardw
 5. `i2s_player`'s playback task reads fixed 640-byte blocks from the ring buffer and writes them to the codec; on underrun it writes silence rather than blocking, so the I2S clock never stalls.
 6. `http_status_server` (STA mode only) exposes `GET /status` (firmware version, IP, MAC, RSSI, `idle`/`streaming` state — driven by `udp_audio_server_is_streaming()`, not buffer occupancy — volume, timestamps, uptime) and `POST /volume`. `time_sync` provides the timestamps via SNTP (`pool.ntp.org`, Europe/Madrid TZ).
 7. `nvs_config` / `volume_storage` persist WiFi credentials + optional static IP + `speaker_id`, and the volume level, in NVS namespace `ipspk_cfg`.
+8. `led_ring` drives the status LED(s) to reflect WiFi/streaming state.
 
 **Known hardware-specific gotchas** (see `docs/hardware_pins.md` for the full pinout, sourced from Waveshare's official `factory_01` demo, not guessed):
 - `PA_CTRL` is TCA9555 `EXIO08`, not a raw GPIO.
@@ -50,6 +58,17 @@ No unit test suite exists yet — verification is done by flashing to real hardw
 - PSRAM must be Octal mode (`CONFIG_SPIRAM_MODE_OCT`), not the Kconfig default Quad — this board's PSRAM chip is Octal-SPI.
 
 **Protocol reference** for anything sending audio to the firmware: see `main/protocol.h` and the working reference sender `docker/reference_send_audio.py` (handles header packing, Opus encoding, and — important — an initial ~300ms unpaced lead-buffer before real-time pacing kicks in; sending strictly in real-time lockstep with no lead produces audible micro-dropouts from ordinary network jitter).
+
+**SIRENA dashboard** (`docker/dashboard/`): a Flask app with an APScheduler `BackgroundScheduler` (instantiated once in `scheduler.py`, imported by both `app.py` and routes to avoid a circular import) running three background jobs:
+- `services/status_poller.py` — polls each registered speaker's `/status` HTTP endpoint.
+- `services/cv112_poller.py` — polls the 112CV incident feed and, per `rules.py`/`taxonomy.py`, decides which incidents trigger an automatic alert (dedupe/change-detection against previously-seen incidents).
+- `services/log_retention.py` — daily cron job (03:00) pruning old logs.
+
+Alert/manual-send flow: an incident or manual request goes through `services/alert_text.py` (message templating) → `services/tts.py` (Piper synthesis, via the `piper` sidecar container reachable only over loopback — see `docker-compose.yml`) → `services/audio_convert.py` → `services/sender.py` (implements the same protocol as `reference_send_audio.py`) → UDP to the target speaker(s)' zone. `services/delivery_confirmation.py` tracks whether each speaker actually received/played a message. `services/geocoding.py` resolves incident locations to zones/speakers.
+
+Two containers total (`docker-compose.yml`, `network_mode: host` for `dashboard`): `dashboard` and `piper` (TTS engine, isolated — no LAN/internet access, reachable only from `dashboard` via loopback). Voice models are downloaded/deleted by the dashboard (`services/voice_downloader.py`, `services/voices_catalog.py`) into a volume shared read-only with `piper`, so `piper` itself never needs internet access.
+
+Persistence: SQLite at `docker/data/dashboard.db`, schema in `schema.sql` plus `_COLUMN_MIGRATIONS` in `db.py` (see Project section above). Only the DB is backed up (`docker/backups/`, see README for the backup/restore flow and `/settings` UI) — logs and voice/tone models are treated as recreable and excluded deliberately.
 
 ## Roadmap / issue tracking
 
