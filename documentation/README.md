@@ -8,6 +8,8 @@ Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) usados como mega
 - [architecture.md](architecture.md) — arquitectura del firmware: componentes, tareas FreeRTOS, ring buffer, flujo de audio.
 - [protocolo-udp.md](protocolo-udp.md) — especificación del protocolo UDP propio (cabecera, tipos de frame, ejemplo en Python).
 - [api-http.md](api-http.md) — endpoints HTTP de status/control y el portal de configuración WiFi.
+- [configuracion-speaker.md](configuracion-speaker.md) — portal de configuración WiFi/IP en modo AP, paso a paso.
+- [alta-altavoz-nuevo.md](alta-altavoz-nuevo.md) — guía completa para poner en marcha un altavoz nuevo: flasheo, configuración WiFi y alta en SIRENA.
 - [../esp32s3-firmware/ip-speaker/docs/hardware_pins.md](../esp32s3-firmware/ip-speaker/docs/hardware_pins.md) — pinout real de la placa, extraído del ejemplo oficial de Waveshare (no inventado).
 
 ## Estado del proyecto

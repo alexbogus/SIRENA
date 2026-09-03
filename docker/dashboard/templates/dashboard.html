@@ -295,15 +295,15 @@ function renderSpeakers(speakers) {
         const statusBar = node.querySelector(".status-bar");
         const stateBadge = node.querySelector(".state");
         if (!sp.online) {
-            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-navy-600";
+            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-red-500";
             stateBadge.textContent = "offline";
-            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-navy-800 text-slate-500";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-red-900/60 text-red-300";
         } else if (sp.state === "streaming") {
-            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-emerald-400 animate-pulse";
+            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-sky-400 animate-pulse";
             stateBadge.textContent = "streaming";
-            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300";
+            stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-sky-900/60 text-sky-300";
         } else {
-            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-sky-400";
+            statusBar.className = "status-bar absolute top-0 left-0 right-0 h-1 bg-emerald-400";
             stateBadge.textContent = "idle";
             stateBadge.className = "state text-xs px-2 py-0.5 rounded-full bg-navy-800 text-slate-300";
         }
