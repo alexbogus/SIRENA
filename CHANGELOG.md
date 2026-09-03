@@ -4,6 +4,15 @@ Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speak
 
 La entrada más reciente (la primera de este archivo) es la que se muestra como versión actual en el pie del sidebar del dashboard — para publicar una versión nueva basta con añadir una sección `## [X.Y.Z] - AAAA-MM-DD` al principio de este archivo.
 
+## [1.5.1] - 2026-09-03
+
+### Cambiado
+- Intervalo por defecto de sondeo del feed 112CV subido de 45s a 180s.
+- Tarjetas de altavoz: el punto de estado (online/streaming/offline) se sustituye por una barra superior de color, más visible.
+
+### Corregido
+- El contenedor `dashboard` corría en UTC (base `python:3.12-slim`) mientras `config.now_sql()` y el JS del dashboard asumen hora local Europe/Madrid, provocando un desfase de 1-2h en timestamps mostrados (p. ej. "última comprobación" del feed 112CV); `docker-compose.yml` fija ahora `TZ=Europe/Madrid`.
+
 ## [1.5.0] - 2026-09-02
 
 ### Añadido

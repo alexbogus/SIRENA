@@ -84,7 +84,7 @@ def _parse_voice_choice(raw: str) -> tuple[str, int | None]:
 @login_required
 def save():
     try:
-        cv112_interval = _clamp(int(request.form.get("cv112_poll_interval_s", 45)),
+        cv112_interval = _clamp(int(request.form.get("cv112_poll_interval_s", 180)),
                                  settings_model.MIN_POLL_INTERVAL_S, settings_model.MAX_POLL_INTERVAL_S)
         status_interval = _clamp(int(request.form.get("status_poll_interval_s", 10)),
                                   settings_model.MIN_POLL_INTERVAL_S, settings_model.MAX_POLL_INTERVAL_S)
