@@ -1,10 +1,11 @@
 import time
 from functools import wraps
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 import config
 import models.settings as settings_model
+import services.api_tokens as api_tokens_service
 
 bp = Blueprint("auth", __name__)
 logger = config.get_logger("auth")
@@ -32,6 +33,24 @@ def login_required(view):
     def wrapped(*args, **kwargs):
         if not session.get("authenticated"):
             return redirect(url_for("auth.login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def require_api_token(view):
+    """Análogo a login_required pero para clientes servidor-a-servidor
+    (n8n, etc.): responde JSON en vez de redirigir a /login. Deja el token
+    verificado en flask.g.api_token para la vista."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return {"error": "Falta la cabecera Authorization: Bearer <token>."}, 401
+        token_info = api_tokens_service.verify(auth_header[len("Bearer "):].strip())
+        if token_info is None:
+            logger.warning(f"Intento de acceso a la API con token inválido/revocado desde {request.remote_addr}")
+            return {"error": "Token inválido o revocado."}, 401
+        g.api_token = token_info
         return view(*args, **kwargs)
     return wrapped
 

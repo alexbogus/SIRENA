@@ -19,6 +19,7 @@
     <div class="flex items-center justify-between gap-4 px-4 py-2.5 flex-wrap">
         <div class="flex items-center gap-3 min-w-0">
             <span class="font-medium shrink-0">{{ z.name }}</span>
+            <span class="text-xs text-slate-500 font-mono shrink-0" title="ID de zona (para la API)">#{{ z.id }}</span>
             {{ badge('activa', 'success') if z.enabled else badge('deshabilitada', 'neutral') }}
             <span class="text-xs text-slate-500 shrink-0">
                 {{ z.speakers|length }} altavoz{{ 'ces' if z.speakers|length != 1 else '' }}

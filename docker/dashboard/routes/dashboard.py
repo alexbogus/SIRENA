@@ -6,6 +6,7 @@ import config
 import models.health as health_model
 import models.messages as messages_model
 import models.settings as settings_model
+import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
 import models.zones as zones_model
 from routes.auth import login_required
@@ -21,7 +22,12 @@ def _speaker_view(sp: dict) -> dict:
     # Se considera offline si el último poll falló o si nunca se ha podido consultar.
     sp["online"] = bool(sp.get("last_poll_ok"))
     sp["history"] = messages_model.history_for_speaker(sp["id"])
+    sp["errors"] = _format_errors(speaker_errors_model.recent_for_speaker(sp["id"], limit=10))
     return sp
+
+
+def _format_errors(errors: list[dict]) -> list[dict]:
+    return [{**e, "occurred_at": config.format_timestamp_es(e["occurred_at"])} for e in errors]
 
 
 def _health_view() -> dict:
@@ -64,13 +70,17 @@ def api_speakers_status():
         "auto_alerts_enabled": settings_model.auto_alerts_enabled(),
         "zones_active": len(zones_model.list_enabled()),
         "messages_today": messages_model.count_today(),
+        "recent_errors": _format_errors(speaker_errors_model.recent(limit=20)),
     })
 
 
 @bp.route("/messages/history")
 @login_required
 def message_history():
-    return render_template("message_history.html", entries=messages_model.full_history())
+    speaker_id = request.args.get("speaker_id", type=int)
+    entries = messages_model.full_history(speaker_id=speaker_id, limit=500 if speaker_id else None)
+    speaker = speakers_model.get(speaker_id) if speaker_id else None
+    return render_template("message_history.html", entries=entries, speaker_filter=speaker)
 
 
 @bp.route("/api/auto-alerts/toggle", methods=["POST"])

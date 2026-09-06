@@ -67,14 +67,32 @@ CREATE TABLE IF NOT EXISTS tones (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Tokens de API para integraciones externas (n8n, etc.), ver
+-- services/api_tokens.py y routes/api_v1.py. Formato del token en claro:
+-- "sirena_<id>_<secret>" -- solo se guarda el hash bcrypt de `secret`, el
+-- `id` (parte pública) permite localizar la fila sin iterar todos los
+-- tokens. zone_ids NULL = sin restricción (el token puede apuntar a
+-- cualquier zona/altavoz); si no, JSON con los ids de zona permitidos.
+CREATE TABLE IF NOT EXISTS api_tokens (
+    id           TEXT PRIMARY KEY,
+    secret_hash  TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    zone_ids     TEXT,
+    revoked      INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS messages (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    source        TEXT NOT NULL,    -- 'manual' | 'auto_112cv'
-    text          TEXT NOT NULL,
-    target_label  TEXT,             -- foto fija del destino en el momento del envío ("Todos", "Cocina, CECOM"...) -- no depende de que la zona siga existiendo
-    rule_id       INTEGER REFERENCES alert_rules(id),
-    incident_id   INTEGER,
-    sent_at       TEXT NOT NULL DEFAULT (datetime('now'))
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    source          TEXT NOT NULL,    -- 'manual' | 'auto_112cv' | 'api'
+    text            TEXT NOT NULL,
+    target_label    TEXT,             -- foto fija del destino en el momento del envío ("Todos", "Cocina, CECOM"...) -- no depende de que la zona siga existiendo
+    rule_id         INTEGER REFERENCES alert_rules(id),
+    incident_id     INTEGER,
+    api_token_id    TEXT REFERENCES api_tokens(id),  -- solo si source='api'
+    api_token_name  TEXT,             -- foto fija del nombre del token en el momento del envío -- igual que target_label, no depende de que el token siga existiendo
+    sent_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS message_targets (
@@ -84,6 +102,24 @@ CREATE TABLE IF NOT EXISTS message_targets (
     send_ok         INTEGER NOT NULL DEFAULT 0,
     delivery_status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'confirmed' | 'unconfirmed'
     checked_at      TEXT
+);
+
+-- Mensajes de la API que llegaron con el altavoz destino ya reproduciendo
+-- algo (ver services/queue_dispatcher.py): esperan aquí, con el WAV ya
+-- sintetizado, a que el altavoz quede libre o expire el plazo
+-- (settings.api_queue_ttl_s). message_targets ya tiene la fila 'pending'
+-- correspondiente desde que se creó el mensaje -- esta tabla solo controla
+-- CUÁNDO se dispara el envío real, no la trazabilidad (que vive en
+-- messages/message_targets como cualquier otro envío).
+CREATE TABLE IF NOT EXISTS message_queue (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id    INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    speaker_id    INTEGER NOT NULL REFERENCES speakers(id) ON DELETE CASCADE,
+    wav_path      TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'sent' | 'expired'
+    enqueued_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at    TEXT NOT NULL,
+    dispatched_at TEXT
 );
 
 -- Plantillas de texto rápidas para el envío manual (/send). Gestionadas
@@ -176,7 +212,7 @@ CREATE TABLE IF NOT EXISTS voice_labels (
 CREATE TABLE IF NOT EXISTS audit_log (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     occurred_at TEXT NOT NULL DEFAULT (datetime('now')),
-    entity_type TEXT NOT NULL,   -- 'speaker' | 'zone'
+    entity_type TEXT NOT NULL,   -- 'speaker' | 'zone' | 'api_token'
     action      TEXT NOT NULL,   -- 'created' | 'updated' | 'deleted'
     entity_name TEXT NOT NULL,
     details     TEXT             -- texto libre, ej. "ip 10.0.1.56 -> 10.0.1.57"

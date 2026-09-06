@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_badge.html" import badge %}
 {% from "_select.html" import select_dropdown %}
+{% from "_multiselect.html" import multiselect %}
 {% block title %}Configuración{% endblock %}
 {% block content %}
 {# Solo la etiqueta, sin el <h1> "Configuración" -- redundante con el nombre
@@ -12,6 +13,7 @@
     ("modelos-voz", "Modelos de voz"),
     ("tonos", "Tonos"),
     ("plantillas", "Plantillas rápidas"),
+    ("tokens-api", "Tokens de API"),
     ("copias-seguridad", "Copias de seguridad"),
 ] %}
 
@@ -76,6 +78,21 @@
                                min="{{ min_retention }}" max="{{ max_retention }}"
                                class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
                     </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="font-medium mb-3">Cola de mensajes de la API</h2>
+                <p class="text-xs text-slate-500 mb-3">
+                    Si un altavoz ya está reproduciendo algo cuando llega un mensaje vía API (ver pestaña
+                    "Tokens de API"), se encola para él y se reproduce en cuanto queda libre, en vez de
+                    interrumpirlo. Este es el tiempo máximo de espera antes de descartar el mensaje encolado.
+                </p>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Tiempo máximo en cola (segundos)</label>
+                    <input type="number" name="api_queue_ttl_s" value="{{ api_queue_ttl_s }}"
+                           min="{{ min_api_queue_ttl }}" max="{{ max_api_queue_ttl }}"
+                           class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2">
                 </div>
             </div>
 
@@ -213,6 +230,7 @@
             <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
                 <div class="flex items-center gap-2 min-w-[140px]">
                     <span class="text-sm">{{ t.name }}</span>
+                    <span class="text-xs text-slate-500 font-mono" title="ID de tono (para la API)">#{{ t.id }}</span>
                     {% if t.is_default %}
                     {{ badge('por defecto', 'info') }}
                     {% endif %}
@@ -307,6 +325,63 @@
             </div>
             <button class="btn-brand px-4 py-2 text-sm">
                 Añadir plantilla
+            </button>
+        </form>
+    </div>
+
+    <div data-settings-panel="tokens-api" class="settings-panel hidden max-w-lg bg-navy-900 border border-white/10 rounded-xl p-4 space-y-4">
+        <p class="text-xs text-slate-500">
+            Tokens de acceso para integraciones externas (n8n, etc.) que envían texto a
+            <code>/api/v1/announce</code> para que se sintetice y se reproduzca por megafonía. Se pueden
+            restringir a una o varias zonas (mínimo privilegio) o dejar sin restricción. El valor del
+            token solo se muestra una vez, justo al crearlo -- guárdalo entonces, no se puede recuperar
+            después (solo revocar o borrar).
+        </p>
+
+        <div class="space-y-2">
+            {% for t in api_tokens %}
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-navy-800/60 border border-white/10 rounded-lg px-3 py-2">
+                <div class="min-w-[140px]">
+                    <div class="text-sm flex items-center gap-2">
+                        {{ t.name }}
+                        {{ badge('revocado', 'neutral') if t.revoked else badge('activo', 'success') }}
+                    </div>
+                    <div class="text-xs text-slate-500">Zonas: {{ t.zone_names }}</div>
+                    <div class="text-xs text-slate-500">Creado {{ t.created_at }} · Último uso: {{ t.last_used_at }}</div>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                    <form method="post" action="{{ url_for('settings.api_tokens_toggle', token_id=t.id) }}"
+                          data-confirm="¿{{ 'Reactivar' if t.revoked else 'Revocar' }} el token {{ t.name }}?">
+                        <button class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1">
+                            <i data-lucide="{{ 'play-circle' if t.revoked else 'pause-circle' }}" class="w-3.5 h-3.5"></i>
+                            {{ 'Reactivar' if t.revoked else 'Revocar' }}
+                        </button>
+                    </form>
+                    <form method="post" action="{{ url_for('settings.api_tokens_delete', token_id=t.id) }}"
+                          data-confirm="¿Eliminar el token {{ t.name }}? Cualquier integración que lo use dejará de funcionar." data-confirm-variant="danger">
+                        <button class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">No hay tokens creados todavía.</p>
+            {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('settings.api_tokens_create') }}"
+              class="space-y-2 pt-2 border-t border-white/10">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Nombre</label>
+                <input name="name" required placeholder="Ej. n8n-cce" class="w-full bg-navy-800 border border-white/10 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Zonas permitidas (vacío = sin restricción, cualquier zona/altavoz)</label>
+                {{ multiselect("zone_ids", zones, [], "Sin restricción (todas)", value_attr="id", label_attr="name") }}
+            </div>
+            <button class="btn-brand px-4 py-2 text-sm">
+                Crear token
             </button>
         </form>
     </div>

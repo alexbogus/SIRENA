@@ -3,12 +3,14 @@ from db import db_cursor
 
 
 def create(source: str, text: str, speaker_ids: list[int], target_label: str,
-           rule_id: int | None = None, incident_id: int | None = None) -> int:
+           rule_id: int | None = None, incident_id: int | None = None,
+           api_token_id: str | None = None, api_token_name: str | None = None) -> int:
     with db_cursor() as cur:
         cur.execute(
-            "INSERT INTO messages(source, text, target_label, rule_id, incident_id, sent_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (source, text, target_label, rule_id, incident_id, config.now_sql()),
+            "INSERT INTO messages(source, text, target_label, rule_id, incident_id, "
+            "api_token_id, api_token_name, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (source, text, target_label, rule_id, incident_id,
+             api_token_id, api_token_name, config.now_sql()),
         )
         message_id = cur.lastrowid
         cur.executemany(
@@ -125,24 +127,32 @@ def count_today() -> int:
     return row["c"]
 
 
-def full_history() -> list[dict]:
-    """Histórico completo de mensajes enviados a todos los altavoces, para la
-    página de histórico global (ordenable/buscable en el cliente)."""
+def full_history(speaker_id: int | None = None, limit: int | None = None) -> list[dict]:
+    """Histórico de mensajes enviados, para la página de histórico global
+    (ordenable/buscable en el cliente). `speaker_id` filtra al histórico
+    completo de un único altavoz (enlazado desde su card en el dashboard)."""
+    query = """
+        SELECT m.sent_at, m.source, m.target_label, m.text, m.api_token_name,
+               mt.speaker_id, s.name AS speaker_name, mt.delivery_status
+        FROM message_targets mt
+        JOIN messages m ON m.id = mt.message_id
+        JOIN speakers s ON s.id = mt.speaker_id
+    """
+    params: list = []
+    if speaker_id is not None:
+        query += " WHERE mt.speaker_id = ?"
+        params.append(speaker_id)
+    query += " ORDER BY m.sent_at DESC"
+    if limit is not None:
+        query += " LIMIT ?"
+        params.append(limit)
     with db_cursor() as cur:
-        rows = cur.execute(
-            """
-            SELECT m.sent_at, m.source, m.target_label, m.text,
-                   mt.speaker_id, s.name AS speaker_name, mt.delivery_status
-            FROM message_targets mt
-            JOIN messages m ON m.id = mt.message_id
-            JOIN speakers s ON s.id = mt.speaker_id
-            ORDER BY m.sent_at DESC
-            """
-        ).fetchall()
+        rows = cur.execute(query, params).fetchall()
     return [
         {
             "sent_at": config.format_timestamp_es(r["sent_at"]),
             "source": r["source"],
+            "api_token_name": r["api_token_name"],
             "speaker_id": r["speaker_id"],
             "speaker_name": r["speaker_name"],
             "target_label": r["target_label"] or "—",

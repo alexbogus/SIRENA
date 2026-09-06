@@ -4,7 +4,12 @@
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
     <div>
         <div class="eyebrow">HISTÓRICO DE MENSAJES</div>
-        <h1 class="text-2xl font-semibold tracking-tight">Histórico de mensajes enviados</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">
+            {{ "Histórico de " ~ speaker_filter.name if speaker_filter else "Histórico de mensajes enviados" }}
+        </h1>
+        {% if speaker_filter %}
+        <a href="{{ url_for('dashboard.message_history') }}" class="text-xs text-brand hover:text-brand-soft">Ver histórico completo de todos los altavoces</a>
+        {% endif %}
     </div>
     <input type="search" id="history-search" placeholder="Buscar por altavoz, zona o texto…"
            class="input input-sm bg-navy-900 border-white/10 text-slate-100 placeholder:text-slate-500 w-full sm:w-72">
@@ -55,11 +60,14 @@ function render() {
     rows.forEach(e => {
         const tr = document.createElement("tr");
         tr.className = "hover:bg-navy-850/40";
+        const sourceLabel = e.source === "api"
+            ? `vía API${e.api_token_name ? " (" + e.api_token_name + ")" : ""}`
+            : e.source;
         tr.innerHTML = `
             <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">${e.sent_at}</td>
             <td class="px-3 py-2 text-xs">${e.speaker_name}</td>
             <td class="px-3 py-2 text-xs">${e.target_label}</td>
-            <td class="px-3 py-2 text-xs text-slate-400">${e.source}</td>
+            <td class="px-3 py-2 text-xs text-slate-400">${sourceLabel}</td>
             <td class="px-3 py-2 text-xs max-w-md truncate" title="${e.text.replace(/"/g, '&quot;')}">${e.text}</td>
             <td class="px-3 py-2 text-xs">${deliveryBadge(e.delivery_status)}</td>
             <td class="px-3 py-2 text-xs">

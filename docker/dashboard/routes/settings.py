@@ -9,10 +9,14 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from werkzeug.utils import secure_filename
 
 import config
+import models.api_tokens as api_tokens_model
+import models.audit as audit_model
 import models.message_templates as message_templates_model
 import models.settings as settings_model
 import models.tones as tones_model
 import models.voices as voices_model
+import models.zones as zones_model
+import services.api_tokens as api_tokens_service
 import services.audio_convert as audio_convert
 import services.backup as backup_service
 import services.voice_downloader as voice_downloader
@@ -30,9 +34,24 @@ def _clamp(value: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, value))
 
 
+def _format_tokens(tokens: list[dict], zones_by_id: dict[int, str]) -> list[dict]:
+    out = []
+    for t in tokens:
+        zone_names = ([zones_by_id.get(z, f"#{z}") for z in t["zone_ids"]]
+                      if t["zone_ids"] is not None else None)
+        out.append({
+            **t,
+            "created_at": config.format_timestamp_es(t["created_at"]),
+            "last_used_at": config.format_timestamp_es(t["last_used_at"]) if t["last_used_at"] else "Nunca",
+            "zone_names": ", ".join(zone_names) if zone_names else "Todas",
+        })
+    return out
+
+
 @bp.route("/")
 @login_required
 def index():
+    zones = zones_model.list_all()
     return render_template(
         "settings.html",
         cv112_poll_interval_s=settings_model.cv112_poll_interval_s(),
@@ -61,6 +80,11 @@ def index():
         installed_voice_keys=voices_catalog.installed_keys(),
         voice_downloads_running=voices_model.list_running_downloads(),
         backups=backup_service.list_backups(),
+        api_queue_ttl_s=settings_model.api_queue_ttl_s(),
+        min_api_queue_ttl=settings_model.MIN_API_QUEUE_TTL_S,
+        max_api_queue_ttl=settings_model.MAX_API_QUEUE_TTL_S,
+        api_tokens=_format_tokens(api_tokens_model.list_all(), {z["id"]: z["name"] for z in zones}),
+        zones=zones,
     )
 
 
@@ -100,6 +124,8 @@ def save():
         tts_sentence_silence = _clamp(float(request.form.get("tts_sentence_silence", 0.3)),
                                        settings_model.MIN_TTS_SENTENCE_SILENCE,
                                        settings_model.MAX_TTS_SENTENCE_SILENCE)
+        api_queue_ttl = _clamp(int(request.form.get("api_queue_ttl_s", 300)),
+                                settings_model.MIN_API_QUEUE_TTL_S, settings_model.MAX_API_QUEUE_TTL_S)
     except (TypeError, ValueError):
         flash("Valores inválidos.", "error")
         return redirect(url_for("settings.index"))
@@ -114,6 +140,7 @@ def save():
     settings_model.set("tts_noise_scale", str(tts_expressiveness))
     settings_model.set("tts_noise_w", str(tts_expressiveness))
     settings_model.set("tts_sentence_silence", str(tts_sentence_silence))
+    settings_model.set("api_queue_ttl_s", str(api_queue_ttl))
 
     _reschedule_poll_jobs(cv112_interval, status_interval)
 
@@ -360,6 +387,55 @@ def backups_upload_restore():
     logger.warning(f"Base de datos restaurada desde archivo subido ({file.filename!r}); reiniciando la aplicación")
     flash("Copia restaurada. La aplicación se está reiniciando, espera unos segundos y recarga.", "success")
     _schedule_restart()
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/api-tokens", methods=["POST"])
+@login_required
+def api_tokens_create():
+    name = request.form.get("name", "").strip()
+    zone_ids_raw = request.form.getlist("zone_ids")
+    zone_ids = [int(z) for z in zone_ids_raw] if zone_ids_raw else None
+
+    if not name:
+        flash("El nombre del token es obligatorio.", "error")
+        return redirect(url_for("settings.index"))
+
+    raw_token = api_tokens_service.issue(name, zone_ids)
+    logger.info(f"Token de API creado: {name!r} (zonas={zone_ids or 'todas'})")
+    audit_model.record("api_token", "created", name,
+                        f"zonas: {zone_ids}" if zone_ids else "sin restricción de zona")
+    flash(f"Token {name!r} creado. Cópialo ahora, no se volverá a mostrar: {raw_token}", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/api-tokens/<token_id>/toggle", methods=["POST"])
+@login_required
+def api_tokens_toggle(token_id: str):
+    token = api_tokens_model.get(token_id)
+    if not token:
+        flash("Token no encontrado.", "error")
+        return redirect(url_for("settings.index"))
+    new_revoked = not bool(token["revoked"])
+    api_tokens_model.set_revoked(token_id, new_revoked)
+    logger.info(f"Token de API {token['name']!r} {'revocado' if new_revoked else 'reactivado'}")
+    audit_model.record("api_token", "updated", token["name"],
+                        "revocado" if new_revoked else "reactivado")
+    flash(f"Token {'revocado' if new_revoked else 'reactivado'}.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.route("/api-tokens/<token_id>/delete", methods=["POST"])
+@login_required
+def api_tokens_delete(token_id: str):
+    token = api_tokens_model.get(token_id)
+    if not token:
+        flash("Token no encontrado.", "error")
+        return redirect(url_for("settings.index"))
+    api_tokens_model.delete(token_id)
+    logger.info(f"Token de API eliminado: {token['name']!r}")
+    audit_model.record("api_token", "deleted", token["name"])
+    flash("Token eliminado.", "success")
     return redirect(url_for("settings.index"))
 
 

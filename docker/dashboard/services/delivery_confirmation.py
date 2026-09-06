@@ -44,18 +44,32 @@ def confirm_target(target_id: int, message_id: int, speaker_id: int, speaker_ip:
         )
 
 
+def schedule_confirmation_for(scheduler, target_id: int, message_id: int, speaker_id: int,
+                               speaker_ip: str, sent_at: str) -> None:
+    """Programa la verificación de entrega de un único target de mensaje.
+    Separado de schedule_confirmations() para que services/alert_dispatch.py
+    pueda usarlo con altavoces despachados en momentos distintos dentro del
+    mismo mensaje (envío inmediato vs. entregado más tarde desde la cola de
+    services/queue_dispatcher.py) sin reprogramar de más al resto."""
+    run_date = datetime.datetime.now() + datetime.timedelta(seconds=config.DELIVERY_CONFIRMATION_DELAY_S)
+    scheduler.add_job(
+        confirm_target,
+        "date",
+        run_date=run_date,
+        args=[target_id, message_id, speaker_id, speaker_ip, sent_at],
+        id=f"confirm-{target_id}",
+        misfire_grace_time=60,
+        replace_existing=True,
+    )
+
+
 def schedule_confirmations(scheduler, message_id: int, sent_at: str) -> None:
     """Programa, con un pequeño delay, la verificación de entrega de todos
-    los targets 'pending' de un mensaje recién enviado."""
-    run_date = datetime.datetime.now() + datetime.timedelta(seconds=config.DELIVERY_CONFIRMATION_DELAY_S)
+    los targets 'pending' de un mensaje recién enviado (todos con el mismo
+    sent_at -- usar schedule_confirmation_for si el mensaje tiene targets
+    despachados en momentos distintos)."""
     for target in messages_model.targets_with_speaker(message_id):
         if target["delivery_status"] != "pending":
             continue
-        scheduler.add_job(
-            confirm_target,
-            "date",
-            run_date=run_date,
-            args=[target["id"], message_id, target["speaker_id"], target["speaker_ip"], sent_at],
-            id=f"confirm-{target['id']}",
-            misfire_grace_time=60,
-        )
+        schedule_confirmation_for(scheduler, target["id"], message_id, target["speaker_id"],
+                                   target["speaker_ip"], sent_at)

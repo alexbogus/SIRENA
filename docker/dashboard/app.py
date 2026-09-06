@@ -14,6 +14,7 @@ from scheduler import scheduler
 from services.changelog import current_version as changelog_current_version
 from services.cv112_poller import poll_once as cv112_poll_once
 from services.log_retention import run_once as log_retention_run_once
+from services.queue_dispatcher import process_queue as queue_dispatcher_process_once
 from services.status_poller import poll_once as status_poll_once
 
 config.configure_logging()
@@ -34,6 +35,7 @@ def create_app() -> Flask:
     from routes.rules import bp as rules_bp
     from routes.settings import bp as settings_bp
     from routes.changelog import bp as changelog_bp
+    from routes.api_v1 import bp as api_v1_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -43,6 +45,7 @@ def create_app() -> Flask:
     app.register_blueprint(rules_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(changelog_bp)
+    app.register_blueprint(api_v1_bp)
 
     @app.context_processor
     def inject_app_version():
@@ -84,8 +87,12 @@ def _start_scheduler() -> None:
         log_retention_run_once, "cron", hour=3, minute=0,
         id="log_retention", max_instances=1, coalesce=True,
     )
+    scheduler.add_job(
+        queue_dispatcher_process_once, "interval", seconds=5,
+        id="queue_dispatcher", max_instances=1, coalesce=True,
+    )
     scheduler.start()
-    logger.info("Scheduler arrancado (status_poller + cv112_poller + log_retention)")
+    logger.info("Scheduler arrancado (status_poller + cv112_poller + log_retention + queue_dispatcher)")
 
 
 app = create_app()

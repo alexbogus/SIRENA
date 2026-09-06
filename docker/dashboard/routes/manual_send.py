@@ -1,22 +1,18 @@
-import datetime
 from pathlib import Path
 
 from flask import Blueprint, after_this_request, flash, redirect, render_template, request, send_file, url_for
 
 import config
 import models.message_templates as message_templates_model
-import models.messages as messages_model
 import models.settings as settings_model
-import models.speaker_errors as speaker_errors_model
 import models.speakers as speakers_model
 import models.tones as tones_model
 import models.zones as zones_model
 from routes.auth import login_required
 from routes.settings import _parse_voice_choice
 from scheduler import scheduler
-from services.delivery_confirmation import schedule_confirmations
-from services.sender import send_to_many
-from services.tts import build_alert_wav, build_preview_wav
+from services.alert_dispatch import dispatch
+from services.tts import build_preview_wav
 
 bp = Blueprint("manual_send", __name__, url_prefix="/send")
 logger = config.get_logger("manual_send")
@@ -112,26 +108,11 @@ def send():
         target_label = ", ".join(zone_names) if zone_names else "—"
 
     try:
-        wav_path = build_alert_wav(text, tone_id=tone_id)
+        message_id, send_results = dispatch(scheduler, text, targets, target_label, tone_id=tone_id, source="manual")
     except Exception:
         logger.exception("Fallo de síntesis TTS en envío manual")
         flash("Fallo al generar el audio (Piper no responde). Inténtalo de nuevo.", "error")
         return redirect(url_for("manual_send.index"))
-
-    target_speaker_ids = [t["id"] for t in targets]
-    message_id = messages_model.create(source="manual", text=text, speaker_ids=target_speaker_ids,
-                                        target_label=target_label)
-    sent_at = datetime.datetime.now().isoformat(timespec="seconds")
-
-    send_results = send_to_many([(t["id"], t["ip"], t["port"]) for t in targets], wav_path)
-    for speaker_id, ok in send_results.items():
-        messages_model.set_send_result(message_id, speaker_id, ok)
-        if not ok:
-            speaker_name = next((t["name"] for t in targets if t["id"] == speaker_id), speaker_id)
-            speaker_errors_model.record(speaker_id, f"Fallo al enviar mensaje manual a {speaker_name!r}")
-    Path(wav_path).unlink(missing_ok=True)
-
-    schedule_confirmations(scheduler, message_id, sent_at)
 
     ok_count = sum(1 for v in send_results.values() if v)
     logger.info(f"Envío manual a {len(targets)} altavoz(ces), {ok_count} OK, texto={text!r}")

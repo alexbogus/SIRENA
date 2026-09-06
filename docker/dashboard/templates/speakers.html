@@ -67,7 +67,10 @@
                                 <i data-lucide="radio-tower" class="w-4 h-4 text-brand-soft"></i>
                             </div>
                             <div>
-                                <div class="font-medium text-slate-100">{{ sp.name }}</div>
+                                <div class="font-medium text-slate-100 flex items-center gap-1.5">
+                                    {{ sp.name }}
+                                    <span class="text-xs text-slate-500 font-mono" title="ID de altavoz (para la API)">#{{ sp.id }}</span>
+                                </div>
                                 <span class="text-xs text-slate-500 font-mono">{{ sp.ip }}:{{ sp.port }}</span>
                             </div>
                         </div>

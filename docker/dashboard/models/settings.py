@@ -27,6 +27,11 @@ _DEFAULTS = {
     "tts_noise_scale": "0.75",
     "tts_noise_w": "0.85",
     "tts_sentence_silence": "0.3",
+    # Cuánto espera en cola un mensaje de la API si el altavoz destino ya
+    # está reproduciendo algo, antes de descartarse (ver
+    # services/queue_dispatcher.py). Envío manual/112CV no encolan, siguen
+    # interrumpiendo de inmediato -- ver CLAUDE.md/plan de esta feature.
+    "api_queue_ttl_s": "300",
 }
 
 # Límites razonables para los campos numéricos editables desde /settings.
@@ -40,6 +45,8 @@ MIN_TTS_NOISE = 0.0
 MAX_TTS_NOISE = 1.0
 MIN_TTS_SENTENCE_SILENCE = 0.0
 MAX_TTS_SENTENCE_SILENCE = 2.0
+MIN_API_QUEUE_TTL_S = 10
+MAX_API_QUEUE_TTL_S = 3600
 
 def tts_voices_choices() -> list[dict]:
     """Voces instaladas en VOICES_DIR (autodescubiertas, ver models/voices.py),
@@ -129,3 +136,7 @@ def tts_noise_w() -> float:
 
 def tts_sentence_silence() -> float:
     return float(get("tts_sentence_silence"))
+
+
+def api_queue_ttl_s() -> int:
+    return int(get("api_queue_ttl_s"))

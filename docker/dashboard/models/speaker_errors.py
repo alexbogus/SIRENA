@@ -1,13 +1,18 @@
 """Log de errores de altavoz retenido en BD (caídas detectadas por polling,
 fallos de envío). Ver Fase 9c del plan."""
+import config
 from db import db_cursor
 
 
 def record(speaker_id: int | None, message: str) -> None:
+    # occurred_at explícito en hora local (config.now_sql()), no el
+    # datetime('now') por defecto del esquema (SQLite lo evalúa en UTC) --
+    # se muestra directamente en el panel de errores del dashboard, así que
+    # tiene que ir en la misma hora que el resto de timestamps de la GUI.
     with db_cursor() as cur:
         cur.execute(
-            "INSERT INTO speaker_error_log(speaker_id, message) VALUES (?, ?)",
-            (speaker_id, message),
+            "INSERT INTO speaker_error_log(speaker_id, message, occurred_at) VALUES (?, ?, ?)",
+            (speaker_id, message, config.now_sql()),
         )
 
 

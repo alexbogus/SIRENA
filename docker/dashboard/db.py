@@ -17,6 +17,8 @@ _COLUMN_MIGRATIONS = [
     ("speaker_status", "mac", "TEXT"),
     ("known_municipios", "source", "TEXT NOT NULL DEFAULT 'feed'"),
     ("processed_incidents", "failure_reason", "TEXT"),
+    ("messages", "api_token_id", "TEXT REFERENCES api_tokens(id)"),
+    ("messages", "api_token_name", "TEXT"),
 ]
 
 # Municipios de la Comarca de l'Horta (Nord + Sud) sembrados en el arranque

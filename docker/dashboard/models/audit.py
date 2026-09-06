@@ -1,6 +1,7 @@
-"""Auditoría de alta/edición/baja de altavoces y zonas. Ver Fase 9c del
-plan: log retenido en BD (retención configurable), a diferencia de los
-eventos del feed 112CV que no se auditan aquí."""
+"""Auditoría de alta/edición/baja de altavoces, zonas y tokens de API
+('speaker' | 'zone' | 'api_token'). Ver Fase 9c del plan: log retenido en
+BD (retención configurable), a diferencia de los eventos del feed 112CV
+que no se auditan aquí."""
 from db import db_cursor
 
 
