@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.utils import secure_filename
 
 import config
@@ -85,6 +85,11 @@ def index():
         max_api_queue_ttl=settings_model.MAX_API_QUEUE_TTL_S,
         api_tokens=_format_tokens(api_tokens_model.list_all(), {z["id"]: z["name"] for z in zones}),
         zones=zones,
+        # Guardado en sesión (no en el flash) justo tras crear un token, y
+        # consumido aquí con pop(): así sobrevive al redirect pero solo se
+        # muestra una vez, ni siquiera si se recarga la página después.
+        new_api_token=session.pop("new_api_token", None),
+        new_api_token_name=session.pop("new_api_token_name", None),
     )
 
 
@@ -405,7 +410,12 @@ def api_tokens_create():
     logger.info(f"Token de API creado: {name!r} (zonas={zone_ids or 'todas'})")
     audit_model.record("api_token", "created", name,
                         f"zonas: {zone_ids}" if zone_ids else "sin restricción de zona")
-    flash(f"Token {name!r} creado. Cópialo ahora, no se volverá a mostrar: {raw_token}", "success")
+    # No se manda por flash (se quedaría plano en un banner de texto, sin
+    # botón de copiar) -- se guarda en sesión y settings.html lo muestra en
+    # un modal dedicado con copia al portapapeles, ver "Formato del token"
+    # en la documentación de la feature.
+    session["new_api_token"] = raw_token
+    session["new_api_token_name"] = name
     return redirect(url_for("settings.index"))
 
 

@@ -436,10 +436,91 @@
     </div>
 
 </div>
+
+{% if new_api_token %}
+<!-- Modal de "token creado": patrón estándar de secreto de un solo vistazo
+     (igual que un Personal Access Token de GitHub o una API key de Stripe)
+     -- el valor no se vuelve a poder recuperar tras cerrarlo, así que se
+     fuerza la copia aquí mismo en vez de dejarlo en un simple banner de
+     texto plano (ver routes/settings.py::index, que lo consume de la
+     sesión con pop() -- no sobrevive a un segundo render). -->
+<dialog id="new_token_modal" class="modal">
+    <div class="modal-box bg-navy-900 border border-white/10 max-w-lg">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-1">
+            <i data-lucide="key-round" class="w-4 h-4 text-brand"></i> Token creado: {{ new_api_token_name }}
+        </h3>
+        <p class="text-xs text-amber-300/90 flex items-start gap-1.5 mb-4">
+            <i data-lucide="triangle-alert" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+            Cópialo ahora. Por seguridad, no se puede volver a mostrar -- si lo pierdes, tendrás que
+            crear un token nuevo.
+        </p>
+        <div class="flex items-center gap-2">
+            <input id="new_token_value" type="text" readonly value="{{ new_api_token }}"
+                   class="flex-1 min-w-0 bg-navy-950 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-slate-100">
+            <button type="button" id="copy_token_btn"
+                    class="btn btn-sm bg-brand hover:bg-brand-dark text-white border-0 gap-1.5 shrink-0">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span id="copy_token_label">Copiar</span>
+            </button>
+        </div>
+        <div class="modal-action pt-4">
+            <button type="button" onclick="new_token_modal.close()" class="btn btn-sm btn-ghost">Cerrar</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+{% if new_api_token %}
+(function () {
+    // navigator.clipboard requiere "contexto seguro" (HTTPS o localhost) --
+    // este dashboard suele desplegarse en HTTP plano dentro de la LAN (ver
+    // docker-compose.yml, sin TLS delante), así que sin este fallback el
+    // botón de copiar simplemente no haría nada ahí. document.execCommand
+    // está deprecado pero sigue funcionando en todos los navegadores
+    // relevantes y no exige contexto seguro.
+    const input = document.getElementById("new_token_value");
+    const btn = document.getElementById("copy_token_btn");
+    const label = document.getElementById("copy_token_label");
+
+    function selectToken() {
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, input.value.length); // iOS Safari ignora .select() en inputs readonly sin esto
+    }
+
+    function showCopied(ok) {
+        label.textContent = ok ? "Copiado" : "Selecciona y copia (Ctrl/Cmd+C)";
+        btn.classList.toggle("bg-emerald-600", ok);
+        btn.classList.toggle("hover:bg-emerald-700", ok);
+        setTimeout(() => {
+            label.textContent = "Copiar";
+            btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
+        }, 2000);
+    }
+
+    btn.addEventListener("click", async () => {
+        selectToken();
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(input.value);
+                showCopied(true);
+            } else {
+                showCopied(document.execCommand("copy"));
+            }
+        } catch (err) {
+            showCopied(false);
+        }
+    });
+    input.addEventListener("click", selectToken);
+
+    new_token_modal.showModal();
+})();
+{% endif %}
+
 (function () {
     // Pestañas exclusivas: un solo panel visible a la vez. Se recuerda la
     // pestaña activa en sessionStorage porque cada acción dentro de un
