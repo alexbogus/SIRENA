@@ -7,7 +7,7 @@ SIRENA (Sistema IP de reconocimiento y envio de nuevas alertas)
 Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) para usarlos como megafonía IP en BRAVO 2.
 
 - `esp32s3-firmware/ip-speaker/` — firmware ESP-IDF de cada altavoz (WiFi, protocolo UDP propio, Opus, portal de configuración).
-- `docker/dashboard/` — el centro de mando SIRENA: gestión de altavoces/zonas, envío manual de mensajes (TTS con Piper) y reglas de alerta automática sobre el feed 112CV.
+- `docker/dashboard/` — el centro de mando SIRENA: gestión de altavoces/zonas, envío manual de mensajes (TTS con Piper), reglas de alerta automática sobre el feed 112CV, y una API REST (`POST /api/v1/announce`, autenticada por token) para integraciones externas como n8n — ver [documentation/n8n-alertas-cce-via-api.md](documentation/n8n-alertas-cce-via-api.md).
 - `docker/reference_send_audio.py` — implementación de referencia del protocolo de envío de audio (empaquetado de cabecera, codificación Opus, pacing), usada por `docker/dashboard/services/sender.py`.
 - `documentation/` — ver [documentation/README.md](documentation/README.md) para el índice completo (arquitectura, protocolo UDP, API HTTP, setup del entorno).
 

@@ -59,12 +59,15 @@ No test suite here either — the dashboard is verified by running it and exerci
 
 **Protocol reference** for anything sending audio to the firmware: see `main/protocol.h` and the working reference sender `docker/reference_send_audio.py` (handles header packing, Opus encoding, and — important — an initial ~300ms unpaced lead-buffer before real-time pacing kicks in; sending strictly in real-time lockstep with no lead produces audible micro-dropouts from ordinary network jitter).
 
-**SIRENA dashboard** (`docker/dashboard/`): a Flask app with an APScheduler `BackgroundScheduler` (instantiated once in `scheduler.py`, imported by both `app.py` and routes to avoid a circular import) running three background jobs:
+**SIRENA dashboard** (`docker/dashboard/`): a Flask app with an APScheduler `BackgroundScheduler` (instantiated once in `scheduler.py`, imported by both `app.py` and routes to avoid a circular import) running background jobs:
 - `services/status_poller.py` — polls each registered speaker's `/status` HTTP endpoint.
 - `services/cv112_poller.py` — polls the 112CV incident feed and, per `rules.py`/`taxonomy.py`, decides which incidents trigger an automatic alert (dedupe/change-detection against previously-seen incidents).
 - `services/log_retention.py` — daily cron job (03:00) pruning old logs.
+- `services/queue_dispatcher.py` — retries `/api/v1/announce` messages left queued because their target speaker was busy (see below).
 
 Alert/manual-send flow: an incident or manual request goes through `services/alert_text.py` (message templating) → `services/tts.py` (Piper synthesis, via the `piper` sidecar container reachable only over loopback — see `docker-compose.yml`) → `services/audio_convert.py` → `services/sender.py` (implements the same protocol as `reference_send_audio.py`) → UDP to the target speaker(s)' zone. `services/delivery_confirmation.py` tracks whether each speaker actually received/played a message. `services/geocoding.py` resolves incident locations to zones/speakers.
+
+`routes/api_v1.py` exposes `POST /api/v1/announce`, a token-authenticated REST endpoint for external integrations (n8n, etc. — see `documentation/n8n-alertas-cce-via-api.md`). Tokens are opaque, revocable, and optionally scoped to a set of zones (`models/api_tokens.py`, `services/api_tokens.py`, managed from `/settings`). It shares `services/alert_dispatch.py` with manual send, but calls `dispatch_with_queue` instead of the interrupting dispatch: if a target speaker is already streaming, the message is queued (`models/message_queue.py`) rather than cutting off what's playing — the only place in the system where a new message doesn't immediately win. `services/queue_dispatcher.py` is a scheduler job (registered in `app.py`) that retries queued messages once per speaker per tick until the speaker frees up or the entry expires.
 
 Two containers total (`docker-compose.yml`, `network_mode: host` for `dashboard`): `dashboard` and `piper` (TTS engine, isolated — no LAN/internet access, reachable only from `dashboard` via loopback). Voice models are downloaded/deleted by the dashboard (`services/voice_downloader.py`, `services/voices_catalog.py`) into a volume shared read-only with `piper`, so `piper` itself never needs internet access.
 

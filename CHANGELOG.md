@@ -4,6 +4,17 @@ Registro de cambios relevantes del proyecto (firmware `esp32s3-firmware/ip-speak
 
 La entrada más reciente (la primera de este archivo) es la que se muestra como versión actual en el pie del sidebar del dashboard — para publicar una versión nueva basta con añadir una sección `## [X.Y.Z] - AAAA-MM-DD` al principio de este archivo.
 
+## [1.6.0] - 2026-09-06
+
+### Añadido
+- `POST /api/v1/announce`: API REST para integraciones externas (n8n y similares), autenticada con tokens opacos revocables gestionables desde `/settings`. Permite dirigir el mensaje a todos los altavoces, a una zona o a un altavoz concreto (por id o por nombre), y respeta el alcance por zona configurado en el token. Si el altavoz destino ya está reproduciendo algo, el mensaje se encola en vez de interrumpirlo — comportamiento exclusivo de la API; el envío manual y las alertas 112CV siguen interrumpiendo como siempre. Reutiliza el mismo pipeline de síntesis/envío que el envío manual.
+- Guía paso a paso (`documentation/n8n-alertas-cce-via-api.md`) para conectar el workflow n8n "ALERTAS CCE - COMDES" con la nueva API: creación del token, localización de ids/nombres de zona/altavoz/tono, configuración del nodo HTTP Request y tabla de errores comunes.
+- La GUI muestra ahora los ids de zona/altavoz/tono (necesarios para construir llamadas a la API) y se conecta por fin `speaker_error_log` a la interfaz (panel de errores recientes, global y por altavoz), que se registraba desde hacía tiempo pero no se mostraba en ningún sitio.
+- Nuevo tono de preámbulo "megafonía de aeropuerto".
+
+### Corregido
+- El token de API recién creado ya no viaja en claro por el flash de la página: se guarda un instante en la sesión del servidor, se consume al renderizar `/settings` (no sobrevive a una recarga) y se muestra en un modal dedicado con botón de copiar (mismo patrón que un token de GitHub o una API key de Stripe/AWS), con fallback a `document.execCommand` para despliegues sobre HTTP plano sin contexto seguro.
+
 ## [1.5.1] - 2026-09-03
 
 ### Cambiado

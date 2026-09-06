@@ -10,6 +10,7 @@ Gestión de altavoces ESP32-S3 (Waveshare ESP32-S3-AUDIO-Board) usados como mega
 - [api-http.md](api-http.md) — endpoints HTTP de status/control y el portal de configuración WiFi.
 - [configuracion-speaker.md](configuracion-speaker.md) — portal de configuración WiFi/IP en modo AP, paso a paso.
 - [alta-altavoz-nuevo.md](alta-altavoz-nuevo.md) — guía completa para poner en marcha un altavoz nuevo: flasheo, configuración WiFi y alta en SIRENA.
+- [n8n-alertas-cce-via-api.md](n8n-alertas-cce-via-api.md) — cómo conectar n8n (u otra integración externa) con `POST /api/v1/announce`, la API de megafonía de SIRENA autenticada por token.
 - [../esp32s3-firmware/ip-speaker/docs/hardware_pins.md](../esp32s3-firmware/ip-speaker/docs/hardware_pins.md) — pinout real de la placa, extraído del ejemplo oficial de Waveshare (no inventado).
 
 ## Estado del proyecto
