@@ -176,3 +176,14 @@ def delete_for_speaker(speaker_id: int) -> int:
     with db_cursor() as cur:
         cur.execute("DELETE FROM message_targets WHERE speaker_id = ?", (speaker_id,))
         return cur.rowcount
+
+
+def delete_all() -> int:
+    """Borra todo el histórico de mensajes (todos los altavoces). Antes hay
+    que desvincular processed_incidents.message_id: esa FK no tiene ON
+    DELETE CASCADE (a diferencia de message_targets/message_queue), así que
+    un DELETE directo violaría la constraint."""
+    with db_cursor() as cur:
+        cur.execute("UPDATE processed_incidents SET message_id = NULL WHERE message_id IS NOT NULL")
+        cur.execute("DELETE FROM messages")  # message_targets/message_queue se borran en cascada
+        return cur.rowcount

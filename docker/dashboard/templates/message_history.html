@@ -11,8 +11,19 @@
         <a href="{{ url_for('dashboard.message_history') }}" class="text-xs text-brand hover:text-brand-soft">Ver histórico completo de todos los altavoces</a>
         {% endif %}
     </div>
-    <input type="search" id="history-search" placeholder="Buscar por altavoz, zona o texto…"
-           class="input input-sm bg-navy-900 border-white/10 text-slate-100 placeholder:text-slate-500 w-full sm:w-72">
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+        <input type="search" id="history-search" placeholder="Buscar por altavoz, zona o texto…"
+               class="input input-sm bg-navy-900 border-white/10 text-slate-100 placeholder:text-slate-500 w-full sm:w-72">
+        {% if entries and not speaker_filter %}
+        <form method="post" action="{{ url_for('dashboard.clear_all_messages') }}"
+              data-confirm="¿Borrar todo el histórico de mensajes de todos los altavoces? Esta acción no se puede deshacer."
+              data-confirm-variant="danger">
+            <button type="submit" class="btn btn-sm bg-red-950/40 border border-red-900/60 text-red-300 hover:bg-red-950/60 whitespace-nowrap inline-flex items-center gap-1.5">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar todos los mensajes
+            </button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 
 <div class="overflow-x-auto">
@@ -31,6 +42,34 @@
     <tbody id="history-body" class="divide-y divide-white/5"></tbody>
 </table>
 </div>
+
+{% if speaker_filter %}
+<div class="mt-6">
+    <div class="eyebrow mb-2">ERRORES RECIENTES</div>
+    {% if errors %}
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm bg-navy-900 border border-white/10 rounded-xl overflow-hidden">
+        <thead class="bg-navy-900/60 text-slate-400 text-left border-b border-white/10">
+            <tr>
+                <th class="px-3 py-2">Fecha</th>
+                <th class="px-3 py-2">Mensaje</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+            {% for err in errors %}
+            <tr>
+                <td class="px-3 py-2 text-xs text-slate-400 tnum whitespace-nowrap">{{ err.occurred_at }}</td>
+                <td class="px-3 py-2 text-xs text-amber-200/90">{{ err.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="text-slate-500 text-sm">Sin errores recientes para este altavoz.</p>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -68,7 +107,7 @@ function render() {
             <td class="px-3 py-2 text-xs">${e.speaker_name}</td>
             <td class="px-3 py-2 text-xs">${e.target_label}</td>
             <td class="px-3 py-2 text-xs text-slate-400">${sourceLabel}</td>
-            <td class="px-3 py-2 text-xs max-w-md truncate" title="${e.text.replace(/"/g, '&quot;')}">${e.text}</td>
+            <td class="px-3 py-2 text-xs max-w-md whitespace-normal break-words">${e.text}</td>
             <td class="px-3 py-2 text-xs">${deliveryBadge(e.delivery_status)}</td>
             <td class="px-3 py-2 text-xs">
                 <form method="post" action="/speakers/${e.speaker_id}/clear-logs"

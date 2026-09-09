@@ -1,8 +1,9 @@
 import datetime
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 import config
+import models.audit as audit_model
 import models.health as health_model
 import models.messages as messages_model
 import models.settings as settings_model
@@ -80,7 +81,18 @@ def message_history():
     speaker_id = request.args.get("speaker_id", type=int)
     entries = messages_model.full_history(speaker_id=speaker_id, limit=500 if speaker_id else None)
     speaker = speakers_model.get(speaker_id) if speaker_id else None
-    return render_template("message_history.html", entries=entries, speaker_filter=speaker)
+    errors = _format_errors(speaker_errors_model.recent_for_speaker(speaker_id, limit=50)) if speaker_id else []
+    return render_template("message_history.html", entries=entries, speaker_filter=speaker, errors=errors)
+
+
+@bp.route("/messages/history/clear-all", methods=["POST"])
+@login_required
+def clear_all_messages():
+    n_messages = messages_model.delete_all()
+    logger.info(f"Histórico de mensajes borrado por completo: {n_messages} mensajes")
+    audit_model.record("messages", "cleared_all", "todos los altavoces", f"mensajes={n_messages}")
+    flash("Histórico de mensajes borrado.", "success")
+    return redirect(request.referrer or url_for("dashboard.message_history"))
 
 
 @bp.route("/api/auto-alerts/toggle", methods=["POST"])
