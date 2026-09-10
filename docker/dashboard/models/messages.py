@@ -132,7 +132,7 @@ def full_history(speaker_id: int | None = None, limit: int | None = None) -> lis
     (ordenable/buscable en el cliente). `speaker_id` filtra al histórico
     completo de un único altavoz (enlazado desde su card en el dashboard)."""
     query = """
-        SELECT m.sent_at, m.source, m.target_label, m.text, m.api_token_name,
+        SELECT mt.id AS target_id, m.sent_at, m.source, m.target_label, m.text, m.api_token_name,
                mt.speaker_id, s.name AS speaker_name, mt.delivery_status
         FROM message_targets mt
         JOIN messages m ON m.id = mt.message_id
@@ -150,6 +150,7 @@ def full_history(speaker_id: int | None = None, limit: int | None = None) -> lis
         rows = cur.execute(query, params).fetchall()
     return [
         {
+            "target_id": r["target_id"],
             "sent_at": config.format_timestamp_es(r["sent_at"]),
             "source": r["source"],
             "api_token_name": r["api_token_name"],
@@ -175,6 +176,15 @@ def delete_for_speaker(speaker_id: int) -> int:
     envió también a otros altavoces/zonas, sigue existiendo para ellos."""
     with db_cursor() as cur:
         cur.execute("DELETE FROM message_targets WHERE speaker_id = ?", (speaker_id,))
+        return cur.rowcount
+
+
+def delete_target(target_id: int) -> int:
+    """Borra una única fila del histórico (un mensaje enviado a un altavoz
+    concreto), sin afectar al mensaje para otros altavoces/zonas ni a sus
+    logs de errores."""
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM message_targets WHERE id = ?", (target_id,))
         return cur.rowcount
 
 

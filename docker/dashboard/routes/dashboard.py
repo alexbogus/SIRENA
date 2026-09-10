@@ -95,6 +95,29 @@ def clear_all_messages():
     return redirect(request.referrer or url_for("dashboard.message_history"))
 
 
+@bp.route("/messages/history/target/<int:target_id>/delete", methods=["POST"])
+@login_required
+def delete_message_target(target_id: int):
+    n = messages_model.delete_target(target_id)
+    if n:
+        logger.info(f"Mensaje borrado del histórico (target_id={target_id})")
+        audit_model.record("messages", "target_deleted", str(target_id))
+        flash("Mensaje borrado.", "success")
+    else:
+        flash("El mensaje ya no existe.", "error")
+    return redirect(request.referrer or url_for("dashboard.message_history"))
+
+
+@bp.route("/errors/clear-all", methods=["POST"])
+@login_required
+def clear_all_errors():
+    n_errors = speaker_errors_model.delete_all()
+    logger.info(f"Errores de altavoz borrados por completo: {n_errors} errores")
+    audit_model.record("speaker_errors", "cleared_all", "todos los altavoces", f"errores={n_errors}")
+    flash("Errores recientes borrados.", "success")
+    return redirect(request.referrer or url_for("dashboard.index"))
+
+
 @bp.route("/api/auto-alerts/toggle", methods=["POST"])
 @login_required
 def toggle_auto_alerts():
